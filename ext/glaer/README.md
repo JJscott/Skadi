@@ -16,7 +16,7 @@ The function documentation can be updated by first nuking the `/docs` directory,
 
 The scripts currently run under (and the CMake project looks for) Python 2.7.
 
-The library [Beautiful Soup 4](http://www.crummy.com/software/BeautifulSoup/) is required. It can be installed with `pip install [--user] beautifulsoup4`.
+The package [Beautiful Soup 4](http://www.crummy.com/software/BeautifulSoup/) is required and is included in GLAER for convenience.
 
 ## Test Project
 
