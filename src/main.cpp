@@ -4,18 +4,11 @@
 #include <vector>
 #include <stdexcept>
 
-#include <GLAER/glaer.h>
-#include <GLFW/glfw3.h>
+#include "Window.hpp"
 
 // TODO kill the glaer test code and do something
 
 using namespace std;
-
-GlaerContext ctx;
-
-GlaerContext * current_glaer_context_impl() {
-	return &ctx;
-}
 
 void draw_dummy(unsigned instances = 1) {
 	static GLuint vao = 0;
@@ -182,47 +175,29 @@ void main() {
 
 int main() {
 
-	GLFWwindow* window;
+	// randomly placed note about texture parameters and debug messages:
+	// nvidia uses this as mipmap allocation hint; not doing it causes warning spam
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-	if (!glfwInit()) {
-		abort();
-	}
+	using namespace gecom;
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-	if (!window) {
-		glfwTerminate();
-		abort();
-	}
-
-	glfwMakeContextCurrent(window);
-
-	// tell glaer how to get its current context
-	glaerSetCurrentContextProvider(current_glaer_context_impl);
-
-	// initialize glaer context
-	if (!glaerInitCurrentContext()) {
-		abort();
-	}
-
-	cout << "GL version string: " << glGetString(GL_VERSION) << endl;
+	Window *win = createWindow().size(1024, 768).title("Skadi").visible(true);
+	win->makeContextCurrent();
 
 	// compile shader
 	GLuint prog = makeProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
 
-	while (!glfwWindowShouldClose(window)) {
+	while (!win->shouldClose()) {
 		
-		int w, h;
-		glfwGetWindowSize(window, &w, &h);
-		glViewport(0, 0, w, h);
+		auto size = win->size();
+		glViewport(0, 0, size.w, size.h);
 
 		// render!
 		glUseProgram(prog);
 		draw_dummy();
 		glUseProgram(0);
 
-		glfwSwapBuffers(window);
+		win->swapBuffers();
 		glfwPollEvents();
 	}
 

@@ -57,23 +57,23 @@ namespace gecom {
 	public:
 		LogOutput(bool mute_ = false) : m_mute(mute_) { }
 
-		inline unsigned verbosity() {
+		unsigned verbosity() {
 			return m_verbosity;
 		}
 
-		inline void verbosity(unsigned v) {
+		void verbosity(unsigned v) {
 			m_verbosity = v;
 		}
 
-		inline bool mute() {
+		bool mute() {
 			return m_mute;
 		}
 
-		inline void mute(bool b) {
+		void mute(bool b) {
 			m_mute = b;
 		}
 
-		inline void write(unsigned verbosity, unsigned type, const std::string &hdr, const std::string &msg) {
+		void write(unsigned verbosity, unsigned type, const std::string &hdr, const std::string &msg) {
 			if (!m_mute && verbosity <= m_verbosity) write_impl(verbosity, type, hdr, msg);
 		}
 
@@ -101,21 +101,21 @@ namespace gecom {
 
 		static void write(unsigned verbosity, unsigned type, const std::string &source, const std::string &msg);
 
-		static inline void addOutput(LogOutput &out) {
+		static void addOutput(LogOutput &out) {
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_outputs.insert(&out);
 		}
 
-		static inline void removeOutput(LogOutput &out) {
+		static void removeOutput(LogOutput &out) {
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_outputs.erase(&out);
 		}
 
-		static inline LogOutput & stdOut() {
+		static LogOutput & stdOut() {
 			return *m_cout;
 		}
 
-		static inline LogOutput & stdErr() {
+		static LogOutput & stdErr() {
 			return *m_cerr;
 		}
 
@@ -131,19 +131,19 @@ namespace gecom {
 			(*m_out) << hdr << msg << std::endl;
 		}
 
-		inline std::ostream & getStream() {
+		std::ostream & stream() {
 			return *m_out;
 		}
 
 	public:
-		explicit inline StreamLogOutput(std::ostream *out_, bool mute_ = false) : LogOutput(mute_), m_out(out_) { }
+		explicit StreamLogOutput(std::ostream *out_, bool mute_ = false) : LogOutput(mute_), m_out(out_) { }
 	};
 
 	// log output for writing to std::cout or std::cerr (as they are the only streams with reliable color support)
 	class ColoredStreamLogOutput : public StreamLogOutput {
 	protected:
 		virtual void write_impl(unsigned verbosity, unsigned type, const std::string &hdr, const std::string &msg) override {
-			std::ostream &out = getStream();
+			std::ostream &out = stream();
 			using namespace std;
 			if (verbosity == 0) {
 				switch (type) {
@@ -171,7 +171,7 @@ namespace gecom {
 		}
 
 	public:
-		explicit inline ColoredStreamLogOutput(std::ostream *out_, bool mute_ = false) : StreamLogOutput(out_, mute_) { }
+		explicit ColoredStreamLogOutput(std::ostream *out_, bool mute_ = false) : StreamLogOutput(out_, mute_) { }
 	};
 
 	class FileLogOutput : public StreamLogOutput {
@@ -179,7 +179,7 @@ namespace gecom {
 		std::ofstream m_out;
 
 	public:
-		explicit inline FileLogOutput(
+		explicit FileLogOutput(
 			const std::string &fname_,
 			std::ios_base::openmode mode_ = std::ios_base::trunc,
 			bool mute_ = false
@@ -223,23 +223,30 @@ namespace gecom {
 			rhs.m_write = false;
 		}
 
-		// set type to Log::warning and verbosity to 1
-		basic_logstream & warning() {
-			m_type = Log::warning;
-			m_verbosity = 1;
+		// set type to Log::information and default verbosity to 2
+		basic_logstream & information(unsigned v = 2) {
+			m_type = Log::information;
+			m_verbosity = v;
 			return *this;
 		}
 
-		// set type to Log::error and verbosity to 0
-		basic_logstream & error() {
+		// set type to Log::warning and default verbosity to 1
+		basic_logstream & warning(unsigned v = 1) {
+			m_type = Log::warning;
+			m_verbosity = v;
+			return *this;
+		}
+
+		// set type to Log::error and default verbosity to 0
+		basic_logstream & error(unsigned v = 0) {
 			m_type = Log::error;
-			m_verbosity = 0;
+			m_verbosity = v;
 			return *this;
 		}
 
 		// set verbosity
-		basic_logstream & operator%(unsigned verbosity) {
-			m_verbosity = verbosity;
+		basic_logstream & verbosity(unsigned v) {
+			m_verbosity = v;
 			return *this;
 		}
 

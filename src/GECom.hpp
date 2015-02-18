@@ -27,12 +27,6 @@ namespace gecom {
 	protected:
 		Uncopyable() { }
 	};
-
-	// real std::make_unique is c++14, so this will do for the moment
-	template <typename T, typename... ArgTR>
-	inline std::unique_ptr<T> make_unique(ArgTR && ...args) {
-		return std::unique_ptr<T>(new T(std::forward<ArgTR>(args)...));
-	}
 	
 	// trim leading and trailing whitespace
 	inline std::string trim(const std::string &s) {

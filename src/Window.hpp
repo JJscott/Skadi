@@ -174,7 +174,7 @@ namespace gecom {
 		// shader manager, shared (potentially) with other windows
 		std::shared_ptr<ShaderManager> m_shaderman;
 
-		void initialise();
+		void initialize();
 		void destroy();
 
 	public:
@@ -202,77 +202,77 @@ namespace gecom {
 		gecom::Event<char_event> onChar;
 
 		// ctor: takes ownership of a GLFW window handle
-		inline Window(GLFWwindow *handle_, const Window *share = nullptr) : m_handle(handle_) {
+		Window(GLFWwindow *handle_, const Window *share = nullptr) : m_handle(handle_) {
 			if (m_handle == nullptr) throw window_error("GLFW window handle is null");
 			if (share) {
 				m_shaderman = share->shaderManager();
 			} else {
 				m_shaderman = std::make_shared<ShaderManager>(".");
 			}
-			initialise();
+			initialize();
 		}
 
-		inline GLFWwindow * handle() const {
+		GLFWwindow * handle() const {
 			return m_handle;
 		}
 
-		inline void pos(int x, int y) {
+		void pos(int x, int y) {
 			glfwSetWindowPos(m_handle, x, y);
 		}
 
-		inline void pos(const point2i &p) {
+		void pos(const point2i &p) {
 			glfwSetWindowPos(m_handle, p.x, p.y);
 		}
 
-		inline point2i pos() const {
+		point2i pos() const {
 			point2i p;
 			glfwGetWindowPos(m_handle, &p.x, &p.y);
 			return p;
 		}
 
-		inline void size(int w, int h) {
+		void size(int w, int h) {
 			glfwSetWindowSize(m_handle, w, h);
 		}
 
-		inline void size(const size2i &s) {
+		void size(const size2i &s) {
 			glfwSetWindowSize(m_handle, s.w, s.h);
 		}
 
-		inline size2i size() const {
+		size2i size() const {
 			size2i s;
 			glfwGetWindowSize(m_handle, &s.w, &s.h);
 			return s;
 		}
 
-		inline void width(int w) {
+		void width(int w) {
 			size2i s = size();
 			s.w = w;
 			size(s);
 		}
 
-		inline int width() const {
+		int width() const {
 			int w, h;
 			glfwGetWindowSize(m_handle, &w, &h);
 			return w;
 		}
 
-		inline void height(int h) {
+		void height(int h) {
 			size2i s = size();
 			s.h = h;
 			size(s);
 		}
 
-		inline int height() const {
+		int height() const {
 			int w, h;
 			glfwGetWindowSize(m_handle, &w, &h);
 			return h;
 		}
 
-		inline void title(const std::string &s) {
+		void title(const std::string &s) {
 			glfwSetWindowTitle(m_handle, s.c_str());
 		}
 
-		inline void visible(bool b) {
+		void visible(bool b) {
 			if (b) {
 				glfwShowWindow(m_handle);
 			} else {
@@ -280,17 +280,17 @@ namespace gecom {
 			}
 		}
 
-		inline bool shouldClose() const {
+		bool shouldClose() const {
 			return glfwWindowShouldClose(m_handle);
 		}
 
 		void makeContextCurrent();
 
-		inline void swapBuffers() const {
+		void swapBuffers() const {
 			glfwSwapBuffers(m_handle);
 		}
 
-		inline int attrib(int a) const {
+		int attrib(int a) const {
 			return glfwGetWindowAttrib(m_handle, a);
 		}
 
@@ -314,7 +314,7 @@ namespace gecom {
 		bool pollMouseButton(int button);
 
 		// windows must only be destroyed from the main thread
-		inline ~Window() {
+		~Window() {
 			destroy();
 		}
 
@@ -331,9 +331,9 @@ namespace gecom {
 
 	public:
 		create_window_args() {
-			m_hints[GLFW_OPENGL_PROFILE] = GLFW_OPENGL_CORE_PROFILE;
 			m_hints[GLFW_CONTEXT_VERSION_MAJOR] = 3;
 			m_hints[GLFW_CONTEXT_VERSION_MINOR] = 3;
+			m_hints[GLFW_OPENGL_PROFILE] = GLFW_OPENGL_CORE_PROFILE;
 			m_hints[GLFW_OPENGL_FORWARD_COMPAT] = true;
 			m_hints[GLFW_SAMPLES] = 0;
 			m_hints[GLFW_VISIBLE] = false;
@@ -343,17 +343,25 @@ namespace gecom {
 #endif
 		}
 
-		inline create_window_args & width(int w) { m_size.w = w; return *this; }
-		inline create_window_args & height(int h) { m_size.h = h; return *this; }
-		inline create_window_args & size(int w, int h) { m_size.w = w; m_size.h = h; return *this; }
-		inline create_window_args & size(size2i s) { m_size = s; return *this; }
-		inline create_window_args & title(const std::string &title) { m_title = title; return *this; }
-		inline create_window_args & monitor(GLFWmonitor *mon) { m_monitor = mon; return *this; }
-		inline create_window_args & visible(bool b) { m_hints[GLFW_VISIBLE] = b; return *this; }
-		inline create_window_args & resizable(bool b) { m_hints[GLFW_RESIZABLE] = b; return *this; }
-		inline create_window_args & debug(bool b) { m_hints[GLFW_OPENGL_DEBUG_CONTEXT] = b; return *this; }
-		inline create_window_args & share(const Window *win) { m_share = win; return *this; }
-		inline create_window_args & hint(int target, int hint) { m_hints[target] = hint; return *this; }
+		create_window_args & width(int w) { m_size.w = w; return *this; }
+		create_window_args & height(int h) { m_size.h = h; return *this; }
+		create_window_args & size(int w, int h) { m_size.w = w; m_size.h = h; return *this; }
+		create_window_args & size(size2i s) { m_size = s; return *this; }
+		create_window_args & title(const std::string &title) { m_title = title; return *this; }
+		create_window_args & monitor(GLFWmonitor *mon) { m_monitor = mon; return *this; }
+		create_window_args & visible(bool b) { m_hints[GLFW_VISIBLE] = b; return *this; }
+		create_window_args & resizable(bool b) { m_hints[GLFW_RESIZABLE] = b; return *this; }
+		create_window_args & debug(bool b) { m_hints[GLFW_OPENGL_DEBUG_CONTEXT] = b; return *this; }
+		create_window_args & share(const Window *win) { m_share = win; return *this; }
+		create_window_args & hint(int target, int hint) { m_hints[target] = hint; return *this; }
+
+		create_window_args & contextVersion(unsigned major, unsigned minor) {
+			// forward compat only works for 3.0+
+			if (major < 3) m_hints.erase(GLFW_OPENGL_FORWARD_COMPAT);
+			// core/compat profiles only work for 3.2+
+			if (major * 100 + minor <= 302) m_hints[GLFW_OPENGL_PROFILE] = GLFW_OPENGL_ANY_PROFILE;
+			return *this;
+		}
 
 		// this should only be called from the main thread
 		operator Window * ();
