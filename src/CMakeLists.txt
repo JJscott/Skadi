@@ -2,10 +2,16 @@
 
 # list headers here
 SET(skadi_hdr
+	"Camera.hpp"
 	"GECom.hpp"
 	"GL.hpp"
+	"Graph.hpp"
+	"Heightmap.hpp"
 	"Initial3D.hpp"
+	"Image.hpp"
 	"Log.hpp"
+	"Perlin.hpp"
+	"RidgeConverter.hpp"
 	"Window.hpp"
 	"Concurrent.hpp"
 	"Shader.hpp"
@@ -17,6 +23,7 @@ SET(skadi_hdr
 SET(skadi_src
 	"main.cpp"
 	"Log.cpp"
+	"Perlin.hpp"
 	"Window.cpp"
 	"Concurrent.cpp"
 )
