@@ -26,52 +26,6 @@ void draw_dummy(unsigned instances = 1) {
 }
 
 
-const char *shader_prog_src = R"delim(
-
-#ifdef _VERTEX_
-
-void main() { }
-
-#endif
-
-#ifdef _GEOMETRY_
-
-layout(points) in;
-layout(triangle_strip, max_vertices = 3) out;
-
-out vec2 texCoord;
-
-void main() {
-	gl_Position = vec4(3.0, 1.0, 0.0, 1.0);
-	texCoord = vec2(2.0, 1.0);
-	EmitVertex();
-	
-	gl_Position = vec4(-1.0, 1.0, 0.0, 1.0);
-	texCoord = vec2(0.0, 1.0);
-	EmitVertex();
-	
-	gl_Position = vec4(-1.0, -3.0, 0.0, 1.0);
-	texCoord = vec2(0.0, -1.0);
-	EmitVertex();
-	
-	EndPrimitive();
-}
-
-#endif
-
-#ifdef _FRAGMENT_
-
-in vec2 texCoord;
-out vec4 frag_color;
-
-void main() {
-	frag_color = vec4(texCoord, 0.0, 1.0);
-}
-
-#endif
-
-)delim";
-
 gecom::Window *win;
 skadi::Projection *projection;
 skadi::Camera *camera;
@@ -144,12 +98,20 @@ int main() {
 	win = gecom::createWindow().size(1024, 768).title("Skadi").visible(true);
 	win->makeContextCurrent();
 
+	// // listen for mouse movement
+	// win->onMouseMove.subscribe([](const gecom::mouse_event &e) {
+	// 	//cout << e.pos.x << " " << e.pos.y << endl;
+	// 	return false;
+	// }).forever();
+
+	// // listen for key presses
+	// win->onKeyPress.subscribe([](const gecom::key_event &e) {
+	// 	//cout << e.key << endl;
+	// 	return false;
+	// }).forever();
+
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
-
-	// compile shader
-	GLuint prog = skadi::makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
-
 
 	double lastFPSTime = glfwGetTime();
 	int fps = 0;

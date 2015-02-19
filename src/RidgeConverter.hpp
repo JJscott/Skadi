@@ -243,7 +243,7 @@ namespace skadi {
 			//Preprocess
 			//
 			diamondSquare(compileParents, size);
-			diamondSquare(printParents, size);
+			// diamondSquare(printParents, size);
 
 
 			// MBDU
