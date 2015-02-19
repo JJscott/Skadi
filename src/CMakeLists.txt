@@ -9,6 +9,7 @@ SET(skadi_hdr
 	"Window.hpp"
 	"Concurrent.hpp"
 	"Shader.hpp"
+	"SimpleShader.hpp"
 )
 
 

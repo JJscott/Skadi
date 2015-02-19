@@ -5,8 +5,7 @@
 #include <stdexcept>
 
 #include "Window.hpp"
-
-// TODO kill the glaer test code and do something
+#include "SimpleShader.hpp"
 
 using namespace std;
 
@@ -18,111 +17,6 @@ void draw_dummy(unsigned instances = 1) {
 	glBindVertexArray(vao);
 	glDrawArraysInstanced(GL_POINTS, 0, 1, instances);
 	glBindVertexArray(0);
-}
-
-
-class shader_error : public std::runtime_error {
-public:
-	explicit shader_error(const std::string &what_ = "Generic shader error.") : std::runtime_error(what_) { }
-};
-
-class shader_type_error : public shader_error {
-public:
-	explicit shader_type_error(const std::string &what_ = "Bad shader type.") : shader_error(what_) { }
-};
-
-class shader_compile_error : public shader_error {
-public:
-	explicit shader_compile_error(const std::string &what_ = "Shader compilation failed.") : shader_error(what_) { }
-};
-
-class shader_link_error : public shader_error {
-public:
-	explicit shader_link_error(const std::string &what_ = "Shader program linking failed.") : shader_error(what_) { }
-};
-
-inline void printShaderInfoLog(GLuint obj) {
-	int infologLength = 0;
-	int charsWritten = 0;
-	glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
-	if (infologLength > 1) {
-		std::vector<char> infoLog(infologLength);
-		glGetShaderInfoLog(obj, infologLength, &charsWritten, &infoLog[0]);
-		cout << "SHADER:\n" << &infoLog[0];
-	}
-}
-
-inline void printProgramInfoLog(GLuint obj) {
-	int infologLength = 0;
-	int charsWritten = 0;
-	glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &infologLength);
-	if (infologLength > 1) {
-		std::vector<char> infoLog(infologLength);
-		glGetProgramInfoLog(obj, infologLength, &charsWritten, &infoLog[0]);
-		cout << "PROGRAM:\n" << &infoLog[0];
-	}
-}
-
-inline GLuint compileShader(GLenum type, const std::string &text) {
-	GLuint shader = glCreateShader(type);
-	const char *text_c = text.c_str();
-	glShaderSource(shader, 1, &text_c, nullptr);
-	glCompileShader(shader);
-	GLint compile_status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &compile_status);
-	if (!compile_status) {
-		printShaderInfoLog(shader);
-		throw shader_compile_error();
-	}
-	// always print, so we can see warnings
-	printShaderInfoLog(shader);
-	return shader;
-}
-
-inline void linkProgram(GLuint prog) {
-	glLinkProgram(prog);
-	GLint link_status;
-	glGetProgramiv(prog, GL_LINK_STATUS, &link_status);
-	if (!link_status) {
-		printProgramInfoLog(prog);
-		throw shader_link_error();
-	}
-	// always print, so we can see warnings
-	printProgramInfoLog(prog);
-}
-
-inline GLuint makeProgram(const string &profile, const vector<GLenum> &stypes, const string &source) {
-	GLuint prog = glCreateProgram();
-
-	auto get_define = [](GLenum stype) {
-		switch (stype) {
-		case GL_VERTEX_SHADER:
-			return "_VERTEX_";
-		case GL_GEOMETRY_SHADER:
-			return "_GEOMETRY_";
-		case GL_TESS_CONTROL_SHADER:
-			return "_TESS_CONTROL_";
-		case GL_TESS_EVALUATION_SHADER:
-			return "_TESS_EVALUATION_";
-		case GL_FRAGMENT_SHADER:
-			return "_FRAGMENT_";
-		default:
-			return "_DAMN_AND_BLAST_";
-		}
-	};
-
-	for (auto stype : stypes) {
-		ostringstream oss;
-		oss << "#version " << profile << endl;
-		oss << "#define " << get_define(stype) << endl;
-		oss << source;
-		auto shader = compileShader(stype, oss.str());
-		glAttachShader(prog, shader);
-	}
-
-	linkProgram(prog);
-	cout << "Shader program compiled and linked successfully" << endl;
-	return prog;
 }
 
 
@@ -179,13 +73,11 @@ int main() {
 	// nvidia uses this as mipmap allocation hint; not doing it causes warning spam
 	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-	using namespace gecom;
-
-	Window *win = createWindow().size(1024, 768).title("Skadi").visible(true);
+	gecom::Window *win = gecom::createWindow().size(1024, 768).title("Skadi").visible(true);
 	win->makeContextCurrent();
 
 	// compile shader
-	GLuint prog = makeProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
+	GLuint prog = skadi::makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
 
 	while (!win->shouldClose()) {
 		
