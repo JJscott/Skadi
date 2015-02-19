@@ -15,16 +15,6 @@ using namespace std;
 using namespace skadi;
 using namespace initial3d;
 
-void draw_dummy(unsigned instances = 1) {
-	static GLuint vao = 0;
-	if (vao == 0) {
-		glGenVertexArrays(1, &vao);
-	}
-	glBindVertexArray(vao);
-	glDrawArraysInstanced(GL_POINTS, 0, 1, instances);
-	glBindVertexArray(0);
-}
-
 
 gecom::Window *win;
 skadi::Projection *projection;
@@ -60,9 +50,9 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 
 		auto ele = RidgeConverter::ridgeToHeightmap(v, size);
 
-		hm = new Heightmap(2048, 2048);
+		hm = new Heightmap(512, 512);
 		hm->setScale(initial3d::vec3d(5, 1, 5));
-		hm->setHeights(ele, size, size);
+		hm->setHeights(&ele[0], size, size);
 	}
 	hm->draw(worldViewMat, projMat);
 }
