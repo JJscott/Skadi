@@ -6,6 +6,7 @@ SET(skadi_hdr
 	"GECom.hpp"
 	"GL.hpp"
 	"Graph.hpp"
+	"GraphEditor.hpp"
 	"Heightmap.hpp"
 	"Initial3D.hpp"
 	"Image.hpp"

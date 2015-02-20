@@ -313,7 +313,7 @@ namespace skadi {
 
 			//Preprocess
 			//
-			diamondSquare(compileParents, size);
+			//diamondSquare(compileParents, size);
 			// diamondSquare(printParents, size);
 
 
@@ -425,8 +425,67 @@ namespace skadi {
 				fq.push(i);
 			}
 
+			//// Without index parents
+			////
+			//while(!fq.empty()) {
+			//	// Record the next recursion height
+			//	//
+			//	int current = fq.top().recursion_height();
 
-			while(!fq.empty()) {
+			//	// While the next cell is at the same recursion height
+			//	//
+			//	do {
+			//		index cell = fq.top();
+			//		unsigned cellIndex = getIdx(cell);
+			//		fq.pop();
+
+			//		// Add the cell to the parent-child list
+			//		//
+			//		for (index par : cellParents[cellIndex]) {
+			//			if (!elevationKnown[getIdx(par)]) {
+			//				if (children.find(par) != children.end()) {
+			//					children[par] = std::vector<index>();
+			//				} 
+			//				children[par].push_back(cell);
+			//			}
+			//		}
+			//	} while (!fq.empty() && fq.top().recursion_height() <= current);
+
+			//	// Process each parent and it's list of children
+			//	//
+			//	for (auto it = children.begin(); it != children.end(); it++) {
+			//		index par = it->first;
+			//		unsigned parIndex = getIdx(par);
+			//		float parElevation = 0;
+
+			//		// For each cell perform a height estimation
+			//		//
+			//		for (index cell : it->second) {
+			//			unsigned cellIndex = getIdx(cell);
+			//			float e = elevationEstimate(
+			//				elevation[ cellIndex ],
+			//				// interpolationValue[ cellIndex ],
+			//				0.4,
+			//				distanceBetween(cell, par));
+
+			//			parElevation += e;
+			//		}
+
+			//		// Set the new parent elevation
+			//		//
+			//		elevation[parIndex] = parElevation / it->second.size();
+			//		elevationKnown[parIndex] = true;
+			//		int rh = par.recursion_height();
+			//		if (rh < size) // TODO change to recursion height max
+			//			fq.push(par);
+			//	}
+			//	children.clear();
+			//}
+
+			// With black magic
+			//
+			index pArr[4];
+			while (!fq.empty()) {
 				// Record the next recursion height
 				//
 				int current = fq.top().recursion_height();
@@ -440,11 +499,15 @@ namespace skadi {
 
 					// Add the cell to the parent-child list
 					//
-					for (index par : cellParents[cellIndex]) {
-						if (!elevationKnown[getIdx(par)]) {
+					cell.parents(pArr);
+					for (int i = 0; i < 4; i++) {
+						index par = pArr[i];
+						if (par.x >= 0 && par.x < size &&
+							par.y >= 0 && par.y < size &&
+							!elevationKnown[getIdx(par)]) {
 							if (children.find(par) != children.end()) {
 								children[par] = std::vector<index>();
-							} 
+							}
 							children[par].push_back(cell);
 						}
 					}
@@ -462,7 +525,7 @@ namespace skadi {
 					for (index cell : it->second) {
 						unsigned cellIndex = getIdx(cell);
 						float e = elevationEstimate(
-							elevation[ cellIndex ],
+							elevation[cellIndex],
 							// interpolationValue[ cellIndex ],
 							0.4,
 							distanceBetween(cell, par));

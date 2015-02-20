@@ -22,7 +22,7 @@ skadi::Camera *camera;
 
 
 void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
-	static int size =  513;
+	static int size =  1025;
 	static Heightmap *hm = nullptr;
 
 
@@ -51,7 +51,7 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 
 		auto ele = RidgeConverter::ridgeToHeightmap(g->getEdges(), size);
 
-		hm = new Heightmap(512, 512);
+		hm = new Heightmap(1024, 1024);
 		hm->setScale(initial3d::vec3d(5, 5, 5));
 		hm->setHeights(&ele[0], size, size);
 	}
