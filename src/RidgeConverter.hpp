@@ -103,12 +103,12 @@ namespace skadi {
 				int r = gcdpow2(x, y);
 				int smask = squarity() ? -1 : 0;
 				p[0].x = x + r;
-				p[0].y = y + r & smask;
-				p[1].x = x - r & smask;
+				p[0].y = y + (r & smask);
+				p[1].x = x - (r & smask);
 				p[1].y = y + r;
 				p[2].x = x - r;
-				p[2].y = y - r & smask;
-				p[3].x = x + r & smask;
+				p[2].y = y - (r & smask);
+				p[3].x = x + (r & smask);
 				p[3].y = y - r;
 			}
 
