@@ -7,6 +7,7 @@
 #include "Camera.hpp"
 #include "Heightmap.hpp"
 #include "Graph.hpp"
+#include "GraphEditor.hpp"
 #include "RidgeConverter.hpp"
 #include "Window.hpp"
 #include "SimpleShader.hpp"
@@ -19,6 +20,7 @@ using namespace initial3d;
 gecom::Window *win;
 skadi::Projection *projection;
 skadi::Camera *camera;
+skadi::GraphEditor *graphEditor;
 
 
 void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
@@ -78,6 +80,26 @@ void display(int w, int h) {
 
 }
 
+void displayEditor(int w, int h) {
+	float zfar = 20000.0f;
+
+	graphEditor->update();
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+
+	// draw graphEditor here
+	//
+	graphEditor->draw();
+
+	glFinish();
+
+}
+
+
 
 
 int main() {
@@ -103,6 +125,8 @@ int main() {
 
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
+
+	graphEditor = new GraphEditor();
 
 	double lastFPSTime = glfwGetTime();
 	int fps = 0;
