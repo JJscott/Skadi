@@ -113,7 +113,7 @@ namespace skadi {
 			}
 
 			int recursion_height() const {
-				return (bit_scan_reverse(gcdpow2(x, y)) << 1u) + squarity();
+				return (bit_scan_forward((1u << 31) | x | y) << 1u) + squarity();
 			}
 		};
 
