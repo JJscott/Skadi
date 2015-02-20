@@ -27,28 +27,29 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 
 
 	if (hm == nullptr) {
-		vector<Edge *> v;
+		Graph *g = new Graph();
 
-		Node *n1 = new Node(vec3f(0.4, 0.5, 0.4));
-		Node *n2 = new Node(vec3f(0.35, 0.7, 0.1));
-		Node *n3 = new Node(vec3f(0.2, 0.5, 0.35));
-		Node *n4 = new Node(vec3f(0.6, 0.7, 0.42));
-		Node *n5 = new Node(vec3f(0.86, 0.5, 0.35));
-		Node *n6 = new Node(vec3f(0.9, 0.7, 0.5));
-		Node *n7 = new Node(vec3f(0.42, 0.5, 0.8));
-		Node *n8 = new Node(vec3f(0.62, 0.7, 0.9));
-		Node *n9 = new Node(vec3f(0.76, 0.7, 0.82));
+		Graph::Node *n1 = g->addNode(vec3f(0.4, 0.5, 0.4));
+		Graph::Node *n2 = g->addNode(vec3f(0.35, 0.7, 0.1));
+		Graph::Node *n3 = g->addNode(vec3f(0.2, 0.5, 0.35));
+		Graph::Node *n4 = g->addNode(vec3f(0.6, 0.7, 0.42));
+		Graph::Node *n5 = g->addNode(vec3f(0.86, 0.5, 0.35));
+		Graph::Node *n6 = g->addNode(vec3f(0.9, 0.7, 0.5));
+		Graph::Node *n7 = g->addNode(vec3f(0.42, 0.5, 0.8));
+		Graph::Node *n8 = g->addNode(vec3f(0.62, 0.7, 0.9));
+		Graph::Node *n9 = g->addNode(vec3f(0.76, 0.7, 0.82));
 
-		v.push_back(new Edge(n1, n2));
-		v.push_back(new Edge(n1, n3));
-		v.push_back(new Edge(n1, n4));
-		v.push_back(new Edge(n4, n5));
-		v.push_back(new Edge(n4, n6));
-		v.push_back(new Edge(n1, n7));
-		v.push_back(new Edge(n7, n8));
-		v.push_back(new Edge(n8, n9));
 
-		auto ele = RidgeConverter::ridgeToHeightmap(v, size);
+		g->addEdge(n1, n2);
+		g->addEdge(n1, n3);
+		g->addEdge(n1, n4);
+		g->addEdge(n4, n5);
+		g->addEdge(n4, n6);
+		g->addEdge(n1, n7);
+		g->addEdge(n7, n8);
+		g->addEdge(n8, n9);
+
+		auto ele = RidgeConverter::ridgeToHeightmap(g->getEdges(), size);
 
 		hm = new Heightmap(512, 512);
 		hm->setScale(initial3d::vec3d(5, 1, 5));

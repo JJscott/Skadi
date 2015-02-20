@@ -95,7 +95,7 @@ namespace skadi {
 
 	public:
 
-		static std::vector<float> ridgeToHeightmap(const std::vector<Edge *> &edges, int size) {
+		static std::vector<float> ridgeToHeightmap(const std::vector<Graph::Edge *> &edges, int size) {
 
 			// Initialization
 			//
@@ -210,7 +210,7 @@ namespace skadi {
 				constraints.push_back(i);
 			};
 
-			auto constrainEdge = [&](Edge *e) -> void {
+			auto constrainEdge = [&](Graph::Edge *e) -> void {
 				initial3d::vec3f v1 = e->getNode1()->getPosition();
 				initial3d::vec3f v2 = e->getNode2()->getPosition();
 
@@ -253,7 +253,7 @@ namespace skadi {
 
 			//std::cout << "MDBU" << std::endl
 
-			for (Edge *e : edges) {
+			for (Graph::Edge *e : edges) {
 				constrainEdge(e);
 			}
 
