@@ -137,8 +137,10 @@ int main() {
 		glViewport(0, 0, size.w, size.h);
 
 		// render!
-		if ( size.w !=0 && size.h != 0)
+		if (size.w != 0 && size.h != 0) {
 			display(size.w, size.h);
+			//displayEditor(size.w, size.h);
+		}
 
 
 		win->swapBuffers();
