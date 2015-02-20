@@ -52,7 +52,7 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 		auto ele = RidgeConverter::ridgeToHeightmap(g->getEdges(), size);
 
 		hm = new Heightmap(512, 512);
-		hm->setScale(initial3d::vec3d(5, 1, 5));
+		hm->setScale(initial3d::vec3d(5, 5, 5));
 		hm->setHeights(&ele[0], size, size);
 	}
 	hm->draw(worldViewMat, projMat);
