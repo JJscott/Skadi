@@ -1,5 +1,42 @@
 #pragma once
 
+#include <cstdint>
+#include <cassert>
+
+#if defined(_MSC_VER)
+// Visual Studio / MSVC
+#include <intrin.h>
+namespace skadi {
+	inline uint32_t bit_scan_forward(uint32_t x) {
+		assert(x);
+		unsigned long i;
+		_BitScanForward(&i, x);
+		return i;
+	}
+
+	inline uint32_t bit_scan_reverse(uint32_t x) {
+		assert(x);
+		unsigned long i;
+		_BitScanReverse(&i, x);
+		return i;
+	}
+}
+#elif defined(__GNUC__)
+// GCC, Clang
+namespace skadi {
+	inline uint32_t bit_scan_forward(uint32_t x) {
+		assert(x);
+		return __builtin_ctz(x);
+	}
+
+	inline uint32_t bit_scan_reverse(uint32_t x) {
+		assert(x);
+		return 31u - __builtin_clz(x);
+	}
+}
+#endif
+
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -20,6 +57,16 @@
 
 namespace skadi {
 
+	inline uint32_t gcdpow2(uint32_t x0) {
+		// ensure highest bit is set in argument for sane result
+		return 1u << bit_scan_forward((1u << 31) | x0);
+	}
+
+	template <typename ...TR>
+	inline uint32_t gcdpow2(uint32_t x0, uint32_t x1, TR ...tr) {
+		return gcdpow2(x0 | x1, tr...);
+	}
+
 	inline void println() {
 		std::cout << std::endl;
 	}
@@ -36,13 +83,37 @@ namespace skadi {
 		struct index {
 			int x;
 			int y;
+
+			index() : x(0), y(0) { }
+
 			index(int _x, int _y) : x(_x), y(_y) {  }
+
+			// TODO josh: why do you have this?
 			index(float _x, float _y) : x(int(_x)), y(int(_y)) {  }
-			// index(int idx, int size) : x(idx % size), y(idx / size) {  }
 
 			bool operator==(const index &other) const {
-				return (x == other.x
-					&& y == other.y);
+				return (x == other.x) && (y == other.y);
+			}
+
+			int squarity() const {
+				return !((y - x) & ((gcdpow2(x) << 1u) - 1u));
+			}
+
+			void parents(index *p) const {
+				int r = gcdpow2(x, y);
+				int smask = squarity() ? -1 : 0;
+				p[0].x = x + r;
+				p[0].y = y + r & smask;
+				p[1].x = x - r & smask;
+				p[1].y = y + r;
+				p[2].x = x - r;
+				p[2].y = y - r & smask;
+				p[3].x = x + r & smask;
+				p[3].y = y - r;
+			}
+
+			int recursion_height() const {
+				return (bit_scan_reverse(gcdpow2(x, y)) << 1u) + squarity();
 			}
 		};
 
