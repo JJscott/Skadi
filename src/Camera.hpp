@@ -151,5 +151,17 @@ namespace skadi {
 		double m_speed;
 	};
 
+
+	class TopDownFixedCamera {
+	public:
+		initial3d::mat4d getViewTransform() {
+			initial3d::mat4d::scale(position.z());
+			initial3d::mat4d::translate(position);
+		}
+		void update() {};
+	private:
+		initial3d::vec3d position;
+	};
+
 }
 

@@ -42,11 +42,79 @@ namespace skadi {
 			glGenBuffers(1, &ibo_edge_idx);
 
 
-			//static const char *shader_prog_src = R"delim(
+			static const char *shader_prog_src = R"delim(
 
-			//)delim";
+			//uniform mat4 modelViewMatrix;
+			uniform mat4 projectionMatrix;
 
-			//shdr_node = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
+			#ifdef _VERTEX_
+
+			layout(location = 0) in vec2 pos_m;
+
+			out VertexData {
+				vec3 pos_m;
+			} vertex_out;
+
+			void main() {
+				vertex_out.pos_m = vec3(pos_m.x, pos_m.y, 0.5);
+			}
+
+			#endif
+
+			#ifdef _GEOMETRY_
+
+			layout(points) in;
+			layout(triangle_strip, max_vertices = 4) out;
+
+			in VertexData {
+				vec3 pos_m;
+			} vertex_in[];
+
+			out VertexData {
+				vec3 pos_v;
+			} vertex_out;
+
+			void main() {
+
+				//vec3 pos_v = (modelViewMatrix * vec4(vertex_in[0].pos_m, 1.0)).xyz;
+				vec3 pos_v = (vec4(vertex_in[0].pos_m, 1.0)).xyz;
+
+				vertex_out.pos_v = pos_v + vec3(-0.01, -0.01, 0);
+				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
+				EmitVertex();
+
+				vertex_out.pos_v = pos_v + vec3( 0.01, -0.01, 0);
+				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
+				EmitVertex();
+
+				vertex_out.pos_v = pos_v + vec3(-0.01,  0.01, 0);
+				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
+				EmitVertex();
+
+				vertex_out.pos_v = pos_v + vec3( 0.01,  0.01, 0);
+				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
+				EmitVertex();
+
+				EndPrimitive();
+			}
+
+			#endif
+
+			#ifdef _FRAGMENT_
+
+			in VertexData {
+				vec3 pos_v;
+			} vertex_in;
+
+			void main() {
+				gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); 
+			}
+
+			#endif
+
+			)delim";
+
+			shdr_node = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
 
 
 		}
@@ -73,36 +141,39 @@ namespace skadi {
 				edgeIdx.push_back(nodeToIdx[edge->getNode2()]);
 			}
 
-			//// Bind node VAO for Nodes
-			////
-			//glBindVertexArray(vao_node);
+			// Bind node VAO for Nodes
+			//
+			glBindVertexArray(vao_node);
 
-			//// Upload positions
-			////
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
-			//glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_STATIC_DRAW); // Only upload once
-			//glEnableVertexAttribArray(0);
-			//glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+			// Upload positions
+			//
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
+			glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_STATIC_DRAW); // Only upload once
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-			//// Bind node VAO for Nodes
-			////
-			//glBindVertexArray(vao_edge);
+			// Bind node VAO for Nodes
+			//
+			glBindVertexArray(vao_edge);
 
-			//// Upload indices
-			////
-			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_edge_idx); // this sticks to the vao
-			//glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_STATIC_DRAW);
+			// Upload indices
+			//
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_edge_idx); // this sticks to the vao
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_STATIC_DRAW);
 
-			//// Upload positions
-			////
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
-			//glEnableVertexAttribArray(0);
-			//glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+			// Upload positions
+			//
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 
-			////Actual Draw Calls
-			//glBindVertexArray(vao_node);
-			//glDrawArrays(GL_POINTS, 0, nodePos.size() / 2);
+			//Actual Draw Calls
+			glUseProgram(shdr_node);
+			glUniformMatrix4fv(glGetUniformLocation(shdr_node, "projectionMatrix"), 1, true, initial3d::mat4f(1));
+
+			glBindVertexArray(vao_node);
+			glDrawArrays(GL_POINTS, 0, nodePos.size() / 2);
 
 
 			//glBindVertexArray(vao_edge);

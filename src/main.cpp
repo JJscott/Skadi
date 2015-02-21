@@ -27,7 +27,7 @@ Brush *brush_test;
 
 
 void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
-	static int size =  1025;
+	static int size =  513;
 	static Heightmap *hm = nullptr;
 
 
@@ -56,7 +56,7 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 
 		auto ele = RidgeConverter::ridgeToHeightmap(g->getEdges(), size);
 
-		hm = new Heightmap(1024, 1024);
+		hm = new Heightmap(512, 512);
 		hm->setScale(initial3d::vec3d(5, 5, 5));
 		hm->setHeights(&ele[0], size, size);
 	}
@@ -80,11 +80,6 @@ void display(int w, int h) {
 
 	draw_test_heightmap(view_matrix, proj_matrix);
 
-	// update brush projection and draw
-	// hacky shit is hacky
-	brush_test->projection(mat4f::scale(1, -1, 1) * mat4f::translate(-1, -1, 0) * mat4f::scale(2.f / w, 2.f / h, 1));
-	brush_test->draw();
-
 	glFinish();
 
 }
@@ -103,6 +98,11 @@ void displayEditor(int w, int h) {
 	// draw graphEditor here
 	//
 	graphEditor->draw();
+
+	// update brush projection and draw
+	// hacky shit is hacky
+	brush_test->projection(mat4f::scale(1, -1, 1) * mat4f::translate(-1, -1, 0) * mat4f::scale(2.f / w, 2.f / h, 1));
+	brush_test->draw();
 
 	glFinish();
 
