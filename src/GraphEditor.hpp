@@ -14,8 +14,11 @@ namespace skadi {
 	class GraphEditor {
 	public:
 
-		GraphEditor() {
+		GraphEditor(gecom::Window *win, int s) {
 			graph = new Graph();
+			camera = new EditorCamera(win, initial3d::vec3d());
+			window = win;
+			size = s;
 
 			Graph::Node *n1 = graph->addNode(initial3d::vec3f(0.4, 0.5, 0.4));
 			Graph::Node *n2 = graph->addNode(initial3d::vec3f(0.35, 0.7, 0.1));
@@ -42,9 +45,9 @@ namespace skadi {
 			glGenBuffers(1, &ibo_edge_idx);
 
 
-			static const char *shader_prog_src = R"delim(
+			static const char *node_shader_prog_src = R"delim(
 
-			//uniform mat4 modelViewMatrix;
+			// uniform mat4 modelViewMatrix;
 			uniform mat4 projectionMatrix;
 
 			#ifdef _VERTEX_
@@ -56,7 +59,7 @@ namespace skadi {
 			} vertex_out;
 
 			void main() {
-				vertex_out.pos_m = vec3(pos_m.x, pos_m.y, 0.5);
+				vertex_out.pos_m = vec3(pos_m.x, pos_m.y, 0.9);
 			}
 
 			#endif
@@ -79,19 +82,19 @@ namespace skadi {
 				//vec3 pos_v = (modelViewMatrix * vec4(vertex_in[0].pos_m, 1.0)).xyz;
 				vec3 pos_v = (vec4(vertex_in[0].pos_m, 1.0)).xyz;
 
-				vertex_out.pos_v = pos_v + vec3(-0.01, -0.01, 0);
+				vertex_out.pos_v = pos_v + vec3(-2, -2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
 				EmitVertex();
 
-				vertex_out.pos_v = pos_v + vec3( 0.01, -0.01, 0);
+				vertex_out.pos_v = pos_v + vec3( 2, -2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
 				EmitVertex();
 
-				vertex_out.pos_v = pos_v + vec3(-0.01,  0.01, 0);
+				vertex_out.pos_v = pos_v + vec3(-2,  2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
 				EmitVertex();
 
-				vertex_out.pos_v = pos_v + vec3( 0.01,  0.01, 0);
+				vertex_out.pos_v = pos_v + vec3( 2,  2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
 				EmitVertex();
 
@@ -106,24 +109,71 @@ namespace skadi {
 				vec3 pos_v;
 			} vertex_in;
 
+			out vec4 frag_color;
+
 			void main() {
-				gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); 
+				frag_color = vec4(1.0, 0.0, 0.0, 1.0); 
 			}
 
 			#endif
 
 			)delim";
 
-			shdr_node = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
+
+			static const char *edge_shader_prog_src = R"delim(
+
+			// uniform mat4 modelViewMatrix;
+			uniform mat4 projectionMatrix;
+
+			#ifdef _VERTEX_
+
+			layout(location = 0) in vec2 pos_m;
+
+			out VertexData {
+				vec3 pos_m;
+			} vertex_out;
+
+			void main() {
+				// vertex_out.pos_m = (projectionMatrix * modelViewMatrix * vec4(pos_m.x, pos_m.y, 1.0, 1.0)).xyz;
+				vertex_out.pos_m = (projectionMatrix * vec4(pos_m.x, pos_m.y, 1.0, 1.0)).xyz;
+			}
+
+			#endif
+
+			#ifdef _FRAGMENT_
+
+			in VertexData {
+				vec3 pos_v;
+			} vertex_in;
+
+			out vec4 frag_color;
+
+			void main() {
+				frag_color = vec4(1.0, 0.0, 0.0, 1.0); 
+			}
+
+			#endif
+
+			)delim";
+
+			shdr_node = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, node_shader_prog_src);
+			shdr_edge = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_FRAGMENT_SHADER }, edge_shader_prog_src);
 
 
 		}
 
 		void update() {
 
+			//update brush stuff here
+			//
+
+			camera->update();
+
 		}
 
 		void draw() {
+
+			// mat4d view_matrix = !camera->getViewTransform();
 
 			std::vector<float> nodePos;
 			std::vector<GLuint> edgeIdx;
@@ -132,8 +182,8 @@ namespace skadi {
 			for (Graph::Node *node : graph->getNodes()) {
 				nodeToIdx[node] = nodePos.size()/2;
 				initial3d::vec3f pos = node->getPosition();
-				nodePos.push_back(pos.x());
-				nodePos.push_back(pos.z());
+				nodePos.push_back(size * pos.x());
+				nodePos.push_back(size * pos.z());
 			}
 
 			for (Graph::Edge *edge : graph->getEdges()) {
@@ -168,16 +218,29 @@ namespace skadi {
 			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 
+			// Construct Projection Matrix
+			//
+			initial3d::mat4f proj_mat = initial3d::mat4f::translate(initial3d::vec3f(-1, -1, 0)) *
+				initial3d::mat4f::scale(1/float(window->size().w/2), 1/float(window->size().h/2), 1);
+
+
+
 			//Actual Draw Calls
+			//
 			glUseProgram(shdr_node);
-			glUniformMatrix4fv(glGetUniformLocation(shdr_node, "projectionMatrix"), 1, true, initial3d::mat4f(1));
+			// glUniformMatrix4fv(glGetUniformLocation(shdr_node, "modelViewMatrix"), 1, true, initial3d::mat4f(1));
+			glUniformMatrix4fv(glGetUniformLocation(shdr_node, "projectionMatrix"), 1, true, proj_mat);
 
 			glBindVertexArray(vao_node);
 			glDrawArrays(GL_POINTS, 0, nodePos.size() / 2);
 
 
-			//glBindVertexArray(vao_edge);
-			//glDrawElements(GL_LINES, edgeIdx.size(), GL_UNSIGNED_INT, nullptr);
+			// glUseProgram(shdr_edge);
+			// // glUniformMatrix4fv(glGetUniformLocation(shdr_node, "modelViewMatrix"), 1, true, initial3d::mat4f(1));
+			// glUniformMatrix4fv(glGetUniformLocation(shdr_node, "projectionMatrix"), 1, true, proj_mat);
+
+			// glBindVertexArray(vao_edge);
+			// glDrawElements(GL_LINES, edgeIdx.size(), GL_UNSIGNED_INT, nullptr);
 
 
 
@@ -195,6 +258,13 @@ namespace skadi {
 
 	private:
 		Graph *graph;
+
+		//
+		//
+		Camera *camera;
+
+		gecom::Window *window;
+		int size;
 
 		// GL information
 		//

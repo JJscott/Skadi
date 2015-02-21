@@ -152,16 +152,54 @@ namespace skadi {
 	};
 
 
-	class TopDownFixedCamera {
+	//Side on camera
+	class EditorCamera : public Camera {
 	public:
-		initial3d::mat4d getViewTransform() {
-			initial3d::mat4d::scale(position.z());
-			initial3d::mat4d::translate(position);
-		}
-		void update() {};
-	private:
-		initial3d::vec3d position;
-	};
+		EditorCamera(gecom::Window *win, const initial3d::vec3d &pos) : m_window(win), position(pos), scale(1.0) {}
 
+		initial3d::mat4d getViewTransform() {
+			return initial3d::mat4d::scale(scale) * initial3d::mat4d::translate(position);
+		}
+
+		void update() {
+
+			using namespace initial3d;
+			using namespace std;
+
+			const float scaleSpeed = 1.1;
+			const float moveSpeed = 1.0;
+
+
+			// time since last update
+			std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
+			double dt = std::chrono::duration_cast<std::chrono::duration<double>>(time_now - m_time_last).count();
+			m_time_last = time_now;
+
+
+			vec3d move = vec3d::zero();
+
+			if (m_window->getKey(GLFW_KEY_W)) move += vec3d::j();
+			if (m_window->getKey(GLFW_KEY_S)) move -= vec3d::j();
+			if (m_window->getKey(GLFW_KEY_A)) move -= vec3d::i();
+			if (m_window->getKey(GLFW_KEY_D)) move += vec3d::i();
+			if (m_window->getKey(GLFW_KEY_LEFT_SHIFT)) scale /= scaleSpeed;
+			if (m_window->getKey(GLFW_KEY_SPACE)) scale *= scaleSpeed;
+
+			try {
+				vec3d dpos = ~move * (moveSpeed/scale) * dt;
+				position = position + dpos;
+
+				//cout << m_pos << endl;
+			}
+			catch (nan_error &e) {
+				// no movement, do nothing
+			}
+		}
+	private:
+		gecom::Window * m_window;
+		initial3d::vec3d position;
+		float scale;
+		std::chrono::steady_clock::time_point m_time_last;
+	};
 }
 

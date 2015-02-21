@@ -85,7 +85,7 @@ void display(int w, int h) {
 }
 
 void displayEditor(int w, int h) {
-	float zfar = 20000.0f;
+	const float zfar = 10.0f;
 
 	graphEditor->update();
 
@@ -93,7 +93,6 @@ void displayEditor(int w, int h) {
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-
 
 	// draw graphEditor here
 	//
@@ -112,6 +111,10 @@ void displayEditor(int w, int h) {
 
 
 int main() {
+
+	const int size = 512;
+
+
 
 	brush_test = new Brush();
 
@@ -142,7 +145,7 @@ int main() {
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
 
-	graphEditor = new GraphEditor();
+	graphEditor = new GraphEditor(win, size);
 
 	double lastFPSTime = glfwGetTime();
 	int fps = 0;
@@ -157,7 +160,7 @@ int main() {
 		// render!
 		if (size.w != 0 && size.h != 0) {
 			display(size.w, size.h);
-			//displayEditor(size.w, size.h);
+			// displayEditor(size.w, size.h);
 		}
 
 
