@@ -25,12 +25,6 @@ namespace skadi {
 			// Brush
 			//
 			brush_radius = 10;
-			auto brushRelativePosition = [&](initial3d::vec3f mouseMovement) -> initial3d::vec3f {
-				int w = window->size().w;
-				int h = window->size().h;
-				initial3d::mat4f mat = (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
-				return mat * mouseMovement;
-			};
 
 			// Listen for mouse movement
 			//
@@ -451,6 +445,14 @@ namespace skadi {
 
 
 	private:
+		
+		initial3d::vec3f brushRelativePosition(initial3d::vec3f mouseMovement) {
+			int w = window->size().w;
+			int h = window->size().h;
+			initial3d::mat4f mat = (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
+			return mat * mouseMovement;
+		};
+
 		//
 		//
 		Camera *camera;
