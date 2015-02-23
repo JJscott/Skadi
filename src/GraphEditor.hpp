@@ -53,7 +53,7 @@ namespace skadi {
 						}
 					}
 
-					brush->step(e.pos.x, e.pos.y, movement, nodes, graph);
+					brush->step(relativePos, movement, nodes, graph);
 				}
 				brush_position = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 				return false; // Nessesary
@@ -77,9 +77,9 @@ namespace skadi {
 					}
 
 					if (e.button == GLFW_MOUSE_BUTTON_1) {
-						brush->activate(e.pos.x, e.pos.y, nodes, graph, false);
+						brush->activate(relativePos, nodes, graph, false);
 					}else if (e.button == GLFW_MOUSE_BUTTON_2) {
-						brush->activate(e.pos.x, e.pos.y, nodes, graph, true);
+						brush->activate(relativePos, nodes, graph, true);
 
 					}
 				}
@@ -88,10 +88,10 @@ namespace skadi {
 
 			win->onMouseRelease.subscribe([&](const gecom::mouse_button_event &e) {
 				if (brush->isActive()) {
-					if (e.button == GLFW_MOUSE_BUTTON_1 && brush->isAlt()) {
+					if (e.button == GLFW_MOUSE_BUTTON_1 && !brush->isAlt()) {
 						brush->deactivate();
 					}
-					else if (e.button == GLFW_MOUSE_BUTTON_2 && !brush->isAlt()) {
+					else if (e.button == GLFW_MOUSE_BUTTON_2 && brush->isAlt()) {
 						brush->deactivate();
 					}
 				}

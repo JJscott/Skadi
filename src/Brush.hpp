@@ -12,10 +12,10 @@ namespace skadi {
 
 	class Brush {
 	public:
-		void activate(int dx, int dy, const std::vector<Graph::Node *> &nodes, Graph *g, bool alt) {
+		void activate(const initial3d::vec3f &position, const std::vector<Graph::Node *> &nodes, Graph *g, bool alt) {
 			active = true;
 			altClick = alt;
-			step(dx, dy, initial3d::vec3f(), nodes, g);
+			step(position, initial3d::vec3f(), nodes, g);
 		}
 
 		void deactivate() {
@@ -23,7 +23,7 @@ namespace skadi {
 			altClick = false;
 		}
 
-		virtual void step(int dx, int dy, const initial3d::vec3f &node_distance, const std::vector<Graph::Node *> &nodes, Graph *g) = 0;
+		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) = 0;
 
 		bool isActive() { return active; }
 		bool isAlt() { return altClick; }
@@ -40,8 +40,8 @@ namespace skadi {
 			return n;
 		}
 
-		virtual void step(int dx, int dy, const initial3d::vec3f &node_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
-			std::cout << "CLICK STEP :: " << dx << "," << dy << std::endl;
+		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
+			std::cout << "CLICK STEP Alt=" << isAlt() << " : " << position << std::endl;
 		}
 	
 	private:
@@ -56,7 +56,7 @@ namespace skadi {
 			return s;
 		}
 
-		virtual void step(int dx, int dy, const initial3d::vec3f &node_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
+		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
 			for (Graph::Node *n :  nodes) {
 				n->selected = !isAlt();
 			}
@@ -65,5 +65,4 @@ namespace skadi {
 	private:
 		SelectBrush() {}
 	};
-
 }
