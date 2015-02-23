@@ -282,8 +282,8 @@ namespace skadi {
 			};
 
 			auto constrainEdge = [&](Graph::Edge *e) -> void {
-				initial3d::vec3f v1 = e->getNode1()->getPosition();
-				initial3d::vec3f v2 = e->getNode2()->getPosition();
+				initial3d::vec3f v1 = e->getNode1()->position;
+				initial3d::vec3f v2 = e->getNode2()->position;
 
 				std::vector<index> indices = getLine(
 					int(v1.x() * size), int(v2.x() * size),

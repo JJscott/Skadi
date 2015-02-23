@@ -158,7 +158,7 @@ namespace skadi {
 		EditorCamera(gecom::Window *win, const initial3d::vec3d &pos) : m_window(win), position(pos), scale(1.0) {}
 
 		initial3d::mat4d getViewTransform() {
-			return initial3d::mat4d::scale(scale) * initial3d::mat4d::translate(position);
+			return initial3d::mat4d::scale(scale, scale, 0) * initial3d::mat4d::translate(position);
 		}
 
 		void update() {
@@ -166,8 +166,8 @@ namespace skadi {
 			using namespace initial3d;
 			using namespace std;
 
-			const float scaleSpeed = 1.1;
-			const float moveSpeed = 1.0;
+			const float scaleSpeed = 1.0005;
+			const float moveSpeed = 500.0;
 
 
 			// time since last update
@@ -178,10 +178,10 @@ namespace skadi {
 
 			vec3d move = vec3d::zero();
 
-			if (m_window->getKey(GLFW_KEY_W)) move += vec3d::j();
-			if (m_window->getKey(GLFW_KEY_S)) move -= vec3d::j();
-			if (m_window->getKey(GLFW_KEY_A)) move -= vec3d::i();
-			if (m_window->getKey(GLFW_KEY_D)) move += vec3d::i();
+			if (m_window->getKey(GLFW_KEY_W)) move -= vec3d::j();
+			if (m_window->getKey(GLFW_KEY_S)) move += vec3d::j();
+			if (m_window->getKey(GLFW_KEY_A)) move += vec3d::i();
+			if (m_window->getKey(GLFW_KEY_D)) move -= vec3d::i();
 			if (m_window->getKey(GLFW_KEY_LEFT_SHIFT)) scale /= scaleSpeed;
 			if (m_window->getKey(GLFW_KEY_SPACE)) scale *= scaleSpeed;
 
@@ -189,7 +189,7 @@ namespace skadi {
 				vec3d dpos = ~move * (moveSpeed/scale) * dt;
 				position = position + dpos;
 
-				//cout << m_pos << endl;
+				//cout << position << " :: move = " << move << endl;
 			}
 			catch (nan_error &e) {
 				// no movement, do nothing

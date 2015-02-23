@@ -23,23 +23,16 @@ namespace skadi {
 			Node(initial3d::vec3f pos) : position(pos), sharpness(0) {  }
 			Node(initial3d::vec3f pos, float sharp) : position(pos), sharpness(sharp) {  }
 
-			
-			inline initial3d::vec3f getPosition() { return position; }
-			inline void setPosition(initial3d::vec3f v) { position = v; }
-
-			inline float getSharpness() { return sharpness; }
-			inline void setSharpness(float s) { sharpness = s; }
-
 			inline const std::unordered_set<Edge *> & getEdges() { return edges; }
 			inline void addEdge(Edge *e) { edges.emplace(e); }
 			inline void removeEdge(Edge *e) { edges.erase(e); }
 			inline bool containsEdge(Edge *e) { return edges.find(e) != edges.end(); }
 
-		private:
-
 			initial3d::vec3f position; //values of [0,1]
 			float sharpness;
+			bool selected;
 
+		private:
 			std::unordered_set<Edge *> edges;
 
 			friend class Graph;

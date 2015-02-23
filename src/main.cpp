@@ -23,8 +23,6 @@ skadi::Projection *projection;
 skadi::Camera *camera;
 skadi::GraphEditor *graphEditor;
 
-Brush *brush_test;
-
 
 void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
 	static int size =  513;
@@ -98,11 +96,6 @@ void displayEditor(int w, int h) {
 	//
 	graphEditor->draw();
 
-	// update brush projection and draw
-	// hacky shit is hacky
-	brush_test->projection(mat4f::scale(1, -1, 1) * mat4f::translate(-1, -1, 0) * mat4f::scale(2.f / w, 2.f / h, 1));
-	brush_test->draw();
-
 	glFinish();
 
 }
@@ -114,33 +107,12 @@ int main() {
 
 	const int size = 512;
 
-
-
-	brush_test = new Brush();
-
 	// randomly placed note about texture parameters and debug messages:
 	// nvidia uses this as mipmap allocation hint; not doing it causes warning spam
 	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
 	win = gecom::createWindow().size(1024, 768).title("Skadi").visible(true);
 	win->makeContextCurrent();
-
-	// // listen for mouse movement
-	win->onMouseMove.subscribe([](const gecom::mouse_event &e) {
-		// move the brush
-		brush_test->position(vec3f(e.pos.x, e.pos.y, 0));
-		return false;
-	}).forever();
-
-	// // listen for key presses
-	win->onKeyPress.subscribe([](const gecom::key_event &e) {
-		if (e.key == GLFW_KEY_LEFT_BRACKET) {
-			brush_test->radius(brush_test->radius() - 1);
-		} else if (e.key == GLFW_KEY_RIGHT_BRACKET) {
-			brush_test->radius(brush_test->radius() + 1);
-		}
-		return false;
-	}).forever();
 
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
@@ -159,8 +131,8 @@ int main() {
 
 		// render!
 		if (size.w != 0 && size.h != 0) {
-			display(size.w, size.h);
-			// displayEditor(size.w, size.h);
+			//display(size.w, size.h);
+			displayEditor(size.w, size.h);
 		}
 
 
