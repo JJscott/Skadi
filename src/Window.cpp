@@ -98,9 +98,9 @@ namespace gecom {
 			// i dont think mouse buttons get repeats, but whatever
 			WindowData *wd = getWindowData(handle);
 			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-				wd->vk.set(button, true);
+				wd->mb.set(button, true);
 			} else {
-				wd->vk.set(button, false);
+				wd->mb.set(button, false);
 			}
 			mouse_button_event e;
 			e.window = wd->window;
