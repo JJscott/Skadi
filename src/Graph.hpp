@@ -8,6 +8,7 @@
 
 
 #include "Initial3D.hpp"
+#include "Float3.hpp"
 
 
 namespace skadi {
@@ -20,17 +21,28 @@ namespace skadi {
 
 		class Node {
 		public:
-			Node(initial3d::vec3f pos) : position(pos), sharpness(0) {  }
-			Node(initial3d::vec3f pos, float sharp) : position(pos), sharpness(sharp) {  }
+			Node(initial3d::float3 pos) : position(pos) {  }
+			Node(initial3d::float3 pos, float sharp) : position(pos), sharpness(sharp) {  }
 
-			inline const std::unordered_set<Edge *> & getEdges() { return edges; }
-			inline void addEdge(Edge *e) { edges.emplace(e); }
-			inline void removeEdge(Edge *e) { edges.erase(e); }
-			inline bool containsEdge(Edge *e) { return edges.find(e) != edges.end(); }
+			const std::unordered_set<Edge *> & getEdges() const { return edges; }
+			void addEdge(Edge *e) { edges.emplace(e); }
+			void removeEdge(Edge *e) { edges.erase(e); }
+			bool containsEdge(Edge *e) const { return edges.find(e) != edges.end(); }
 
-			initial3d::vec3f position; //values of [0,1]
-			float sharpness;
-			bool selected;
+			initial3d::float3 position; //values of [0,1]
+
+			// for layout
+			initial3d::float3 velocity;
+			float mass = 1.f;
+			float charge = 8.f;
+
+			// TODO elevation etc
+
+			float sharpness = 0.f;
+			bool selected = false;
+			
+			// is the node locked in place
+			bool fixed = false;
 
 		private:
 			std::unordered_set<Edge *> edges;
@@ -41,21 +53,25 @@ namespace skadi {
 		class Edge {
 		public:
 
-			inline Node * other(Node *n) {
+			Node * other(Node *n) const {
+				assert(n == node1 || n == node2);
 				return reinterpret_cast<Node *>(uintptr_t(node1) ^ uintptr_t(node2) ^ uintptr_t(n)); //Ben TODO check this
 			}
 
-			inline Node * getNode1() { return node1; }
-			inline Node * getNode2() { return node2; }
+			Node * getNode1() { return node1; }
+			Node * getNode2() { return node2; }
+
+			Node *node1;
+			Node *node2;
+
+			// for layout
+			float spring = 1000000.f;
 
 		private:
 			Edge(Node *n1, Node *n2) : node1(n1), node2(n2) {
 				node1 = n1;
 				node2 = n2;
 			}
-
-			Node *node1;
-			Node *node2;
 
 			friend class Graph;
 		};
@@ -109,16 +125,25 @@ namespace skadi {
 		}
 
 
-		const std::vector<Node *> & getNodes() {
+		const std::vector<Node *> & getNodes() const {
 			return nodes;
 		}
 
-		const std::vector<Edge *> & getEdges() {
+		const std::vector<Edge *> & getEdges() const {
 			return edges;
 		}
 
+		// attempt some number of layout steps.
+		// stops when average speed drops below threshold.
+		// returns number of steps actually taken.
+		int doLayout(int steps, const std::vector<Node *> &active_nodes);
+
 	private:
-		std::vector<Node *> nodes; //would be good to change this to a quad tree?
+		std::vector<Node *> nodes;
 		std::vector<Edge *> edges;
+
+		// for layout
+		float timestep = 0.0001;
+
 	};
 }
