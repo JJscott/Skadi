@@ -68,7 +68,6 @@ namespace skadi {
 						brush->activate(relativePos, relativeRadius, graph, false);
 					}else if (e.button == GLFW_MOUSE_BUTTON_2) {
 						brush->activate(relativePos, relativeRadius, graph, true);
-
 					}
 				}
 				return false; // Nessesary
@@ -79,7 +78,6 @@ namespace skadi {
 				//
 				initial3d::vec3f relativePos = brushRelativePosition(brush_position);
 				float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
-
 
 				if (brush->isActive()) {
 					if (e.button == GLFW_MOUSE_BUTTON_1 && !brush->isAlt()) {
@@ -372,6 +370,7 @@ namespace skadi {
 			//
 			mat4f proj_mat = get_graph_proj_mat(w, h);
 
+			//mat4f view_mat(1);
 			mat4f view_mat = camera->getViewTransform();
 
 

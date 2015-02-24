@@ -14,8 +14,8 @@ namespace skadi {
 		virtual void activate(const initial3d::vec3f &position, float radius, Graph *g, bool alt) {
 			active = true;
 			altClick = alt;
-			step(position, radius, initial3d::vec3f(), g);
 			onActivate(position, radius, g);
+			step(position, radius, initial3d::vec3f(), g);
 		}
 
 		virtual void deactivate(const initial3d::vec3f &position, float radius, Graph *g) {
@@ -87,23 +87,49 @@ namespace skadi {
 			}
 			e /= n;
 			temp_node = g->addNode(position, e);
+			temp_node->fixed = true;
 		}
 
 		virtual void onDeactivate(const initial3d::vec3f &position, float radius, Graph *g) {
+			std::cout << position << std::endl;
 			Graph::Node *n = nullptr;
 			float distance = 10; //randomly high
-			for (Graph::Node *node : getNodesInBrush(position, radius, g)) {
-				if ( (node->position - position).mag() < distance ) {
+			for (Graph::Node *node : g->getNodes()) {
+				float newDis = (node->position - position).mag();
+				if (newDis < distance) {
 					n = node;
+					distance = newDis;
 				}
 			}
 			if (n != nullptr) {
 				g->addEdge(temp_node, n);
 			}
+			temp_node->fixed = false;
+			temp_node = nullptr;
 		}
 
 	private:
 		NodeBrush() {}
-		Graph::Node *temp_node;
+		Graph::Node *temp_node = nullptr;;
+	};
+
+
+
+	class SelectBrush : public Brush {
+	public:
+		static SelectBrush * inst() {
+			static SelectBrush *s = new SelectBrush();
+			return s;
+		}
+
+		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) {
+			for (Graph::Node * n : g->getNodes()) {
+				n->selected = !isAlt();
+			}
+		};
+
+	private:
+		SelectBrush() {}
+		Graph::Node *temp_node = nullptr;;
 	};
 }
