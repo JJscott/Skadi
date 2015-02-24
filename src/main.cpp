@@ -111,7 +111,7 @@ int main() {
 
 	if (std::thread::hardware_concurrency()) {
 		// leave a thread for UI
-		unsigned tc = std::thread::hardware_concurrency() - 1;
+		unsigned tc = max(std::thread::hardware_concurrency() - 1, 1u);
 		omp_set_num_threads(tc);
 		gecom::log("OMP") << "Default thread count: " << tc;
 	}
