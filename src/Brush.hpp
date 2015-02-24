@@ -47,9 +47,7 @@ namespace skadi {
 					std::cout << "Node :: " << n->position << std::endl;
 				}
 			}
-
 			std::cout << "CLICK STEP Alt=" << isAlt() << " : " << position << std::endl;
-			std::cout << "Radius =" << radius << " :travel_distance " << travel_distance << std::endl;
 		}
 	
 	private:
