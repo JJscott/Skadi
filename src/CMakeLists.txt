@@ -18,6 +18,7 @@ SET(skadi_hdr
 	"Shader.hpp"
 	"SimpleShader.hpp"
 	"Brush.hpp"
+	"Float3.hpp"
 )
 
 
@@ -28,6 +29,7 @@ SET(skadi_src
 	"Perlin.hpp"
 	"Window.cpp"
 	"Concurrent.cpp"
+	"Layout.cpp"
 )
 
 
