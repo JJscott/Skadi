@@ -32,9 +32,6 @@ namespace skadi {
 				if (brush->isActive()) {
 					// Move the brush
 					//
-					int w = window->size().w;
-					int h = window->size().h;
-
 					initial3d::vec3f oldPos = brush_position;
 					initial3d::vec3f newPos = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 					brush_position = newPos;
@@ -43,17 +40,9 @@ namespace skadi {
 					//
 					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
 					initial3d::vec3f movement = brushRelativePosition(newPos - oldPos);
+					float relativeRadius = brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius).mag();
 
-					//Calculate What nodes are in area
-					//
-					std::vector<Graph::Node *> nodes;
-					for (Graph::Node *n : graph->getNodes()) {
-						if ((n->position - relativePos).mag() < brush_radius) {
-							nodes.push_back(n);
-						}
-					}
-
-					brush->step(relativePos, movement, nodes, graph);
+					brush->step(relativePos, relativeRadius, movement, graph);
 				}
 				brush_position = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 				return false; // Nessesary
@@ -62,24 +51,19 @@ namespace skadi {
 			// Listen for mouse click
 			//
 			win->onMousePress.subscribe([&](const gecom::mouse_button_event &e) {
-				int w = window->size().w;
-				int h = window->size().h;
-
 				if (!brush->isActive()) {
 					//Calculate What nodes are in area
 					//
 					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-					std::vector<Graph::Node *> nodes;
-					for (Graph::Node *n : graph->getNodes()) {
-						if ((n->position - relativePos).mag() < brush_radius) {
-							nodes.push_back(n);
-						}
-					}
+					float relativeRadius = brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius).mag();
+
+					std::cout << "DEBUG :: " << brush_position << " :: " <<  ~initial3d::vec3f(1, 1, 0) * brush_radius << std::endl;
+					std::cout << "DEBUG :: " << brushRelativePosition(brush_position) << " :: " << brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius) << std::endl;
 
 					if (e.button == GLFW_MOUSE_BUTTON_1) {
-						brush->activate(relativePos, nodes, graph, false);
+						brush->activate(relativePos, relativeRadius, graph, false);
 					}else if (e.button == GLFW_MOUSE_BUTTON_2) {
-						brush->activate(relativePos, nodes, graph, true);
+						brush->activate(relativePos, relativeRadius, graph, true);
 
 					}
 				}
@@ -110,15 +94,15 @@ namespace skadi {
 				return false;
 			}).forever();
 
-			Graph::Node *n1 = graph->addNode(initial3d::vec3f(0.4, 0.5, 0.4));
-			Graph::Node *n2 = graph->addNode(initial3d::vec3f(0.35, 0.7, 0.1));
-			Graph::Node *n3 = graph->addNode(initial3d::vec3f(0.2, 0.5, 0.35));
-			Graph::Node *n4 = graph->addNode(initial3d::vec3f(0.6, 0.7, 0.42));
-			Graph::Node *n5 = graph->addNode(initial3d::vec3f(0.86, 0.5, 0.35));
-			Graph::Node *n6 = graph->addNode(initial3d::vec3f(0.9, 0.7, 0.5));
-			Graph::Node *n7 = graph->addNode(initial3d::vec3f(0.42, 0.5, 0.8));
-			Graph::Node *n8 = graph->addNode(initial3d::vec3f(0.62, 0.7, 0.9));
-			Graph::Node *n9 = graph->addNode(initial3d::vec3f(0.76, 0.7, 0.82));
+			Graph::Node *n1 = graph->addNode(initial3d::vec3f(0.4, 0.4, 0),   0.5, 0.0);
+			Graph::Node *n2 = graph->addNode(initial3d::vec3f(0.35, 0.1, 0),  0.7, 0.0);
+			Graph::Node *n3 = graph->addNode(initial3d::vec3f(0.2, 0.35, 0),  0.5, 0.0);
+			Graph::Node *n4 = graph->addNode(initial3d::vec3f(0.6, 0.42, 0),  0.7, 0.0);
+			Graph::Node *n5 = graph->addNode(initial3d::vec3f(0.86, 0.35, 0), 0.5, 0.0);
+			Graph::Node *n6 = graph->addNode(initial3d::vec3f(0.9, 0.5, 0),   0.7, 0.0);
+			Graph::Node *n7 = graph->addNode(initial3d::vec3f(0.42, 0.8, 0),  0.5, 0.0);
+			Graph::Node *n8 = graph->addNode(initial3d::vec3f(0.62, 0.9, 0),  0.7, 0.0);
+			Graph::Node *n9 = graph->addNode(initial3d::vec3f(0.76, 0.82, 0), 0.7, 0.0);
 
 			graph->addEdge(n1, n2);
 			graph->addEdge(n1, n3);
@@ -337,7 +321,7 @@ namespace skadi {
 				nodeToIdx[node] = nodePos.size() / 2;
 				vec3f pos = node->position;
 				nodePos.push_back(size * pos.x());
-				nodePos.push_back(size * pos.z());
+				nodePos.push_back(size * pos.y());
 			}
 
 			for (Graph::Edge *edge : graph->getEdges()) {
@@ -446,11 +430,11 @@ namespace skadi {
 
 	private:
 		
-		initial3d::vec3f brushRelativePosition(initial3d::vec3f mouseMovement) {
+		initial3d::vec3f brushRelativePosition(initial3d::vec3f mousePosition) {
 			int w = window->size().w;
 			int h = window->size().h;
-			initial3d::mat4f mat = (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
-			return mat * mouseMovement;
+			initial3d::mat4f mat = (!initial3d::mat4f::scale(size, size, 1)) * (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
+			return mat * mousePosition;
 		};
 
 		//

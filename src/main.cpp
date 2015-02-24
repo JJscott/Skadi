@@ -83,8 +83,6 @@ void display(int w, int h) {
 }
 
 void displayEditor(int w, int h) {
-	const float zfar = 10.0f;
-
 	graphEditor->update();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

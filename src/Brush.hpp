@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "Initial3D.hpp"
-
 #include "Graph.hpp"
 #include "Window.hpp"
 #include "SimpleShader.hpp"
@@ -12,10 +11,10 @@ namespace skadi {
 
 	class Brush {
 	public:
-		void activate(const initial3d::vec3f &position, const std::vector<Graph::Node *> &nodes, Graph *g, bool alt) {
+		void activate(const initial3d::vec3f &position, float radius, Graph *g, bool alt) {
 			active = true;
 			altClick = alt;
-			step(position, initial3d::vec3f(), nodes, g);
+			step(position, radius, initial3d::vec3f(), g);
 		}
 
 		void deactivate() {
@@ -23,7 +22,7 @@ namespace skadi {
 			altClick = false;
 		}
 
-		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) = 0;
+		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) = 0;
 
 		bool isActive() { return active; }
 		bool isAlt() { return altClick; }
@@ -40,8 +39,17 @@ namespace skadi {
 			return n;
 		}
 
-		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
+		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) {
+			std::vector<Graph::Node *> nodes;
+			for (Graph::Node * n : g->getNodes()) {
+				if ((n->position - position).mag() <= radius ) {
+					nodes.push_back(n);
+					std::cout << "Node :: " << n->position << std::endl;
+				}
+			}
+
 			std::cout << "CLICK STEP Alt=" << isAlt() << " : " << position << std::endl;
+			std::cout << "Radius =" << radius << " :travel_distance " << travel_distance << std::endl;
 		}
 	
 	private:
@@ -56,10 +64,7 @@ namespace skadi {
 			return s;
 		}
 
-		virtual void step(const initial3d::vec3f &position, const initial3d::vec3f &travel_distance, const std::vector<Graph::Node *> &nodes, Graph *g) {
-			for (Graph::Node *n :  nodes) {
-				n->selected = !isAlt();
-			}
+		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) {
 		}
 
 	private:
