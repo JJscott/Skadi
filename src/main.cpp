@@ -125,6 +125,17 @@ int main() {
 	win = gecom::createWindow().size(1024, 768).title("Skadi").visible(true);
 	win->makeContextCurrent();
 
+	bool editor_enabled = true;
+
+	win->onKeyPress.subscribe([&](const gecom::key_event &e) {
+		if (e.key == GLFW_KEY_TAB) {
+			// TODO switch UIs
+			graphEditor->enableEventDispatch(!editor_enabled);
+			editor_enabled = !editor_enabled;
+		}
+		return false;
+	}).forever();
+
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
 
@@ -158,6 +169,8 @@ int main() {
 		}
 		fps++;
 	}
+
+	delete win;
 
 	glfwTerminate();
 	return 0;

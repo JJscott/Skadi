@@ -59,6 +59,7 @@ namespace gecom {
 	};
 
 	using point2i = point2<int>;
+	using point2f = point2<float>;
 	using point2d = point2<double>;
 
 	//
@@ -71,11 +72,12 @@ namespace gecom {
 		size2() : w(0), h(0) { }
 
 		inline double ratio() const {
-			return double(w) / h;
+			return double(w) / double(h);
 		}
 	};
 
 	using size2i = size2<int>;
+	using size2f = size2<float>;
 	using size2d = size2<double>;
 
 	template <typename T>
@@ -142,22 +144,202 @@ namespace gecom {
 		return r;
 	}
 
-	// forward declaration
+	// window forward declaration
 	class Window;
 
-	//
-	// Window Events
-	//
-	struct window_event { Window *window; };
-	struct window_pos_event : public window_event { point2i pos; };
-	struct window_size_event : public window_event { size2i size; };
-	struct window_focus_event : public window_event { bool focused; };
-	struct window_icon_event : public window_event { bool iconified; };
-	struct mouse_event : public window_event { point2d pos; bool entered; bool exited; };
-	struct mouse_button_event : public mouse_event { int button; int action; int mods; };
-	struct mouse_scroll_event : public mouse_event { size2d offset; };
-	struct key_event : public window_event { int key; int scancode; int action; int mods; };
-	struct char_event : public window_event { unsigned codepoint; };
+	// window event forward declarations
+	struct window_event;
+	struct window_refresh_event;
+	struct window_close_event;
+	struct window_pos_event;
+	struct window_size_event; 
+	struct window_focus_event;
+	struct window_icon_event;
+	struct mouse_event;
+	struct mouse_button_event;
+	struct mouse_scroll_event;
+	struct key_event;
+	struct char_event;
+
+	// virtual event dispatch
+	class WindowEventDispatcher {
+	public:
+		virtual void dispatchWindowRefreshEvent(const window_refresh_event &) { }
+		virtual void dispatchWindowCloseEvent(const window_close_event &) { }
+		virtual void dispatchWindowPosEvent(const window_pos_event &) { }
+		virtual void dispatchWindowSizeEvent(const window_size_event &) { }
+		virtual void dispatchWindowFocusEvent(const window_focus_event &) { }
+		virtual void dispatchWindowIconEvent(const window_icon_event &) { }
+		virtual void dispatchMouseEvent(const mouse_event &) { }
+		virtual void dispatchMouseButtonEvent(const mouse_button_event &) { }
+		virtual void dispatchMouseScrollEvent(const mouse_scroll_event &) { }
+		virtual void dispatchKeyEvent(const key_event &) { }
+		virtual void dispatchCharEvent(const char_event &) { }
+		virtual ~WindowEventDispatcher() { }
+	};
+
+	// base window event
+	struct window_event {
+		Window *window = nullptr;
+
+		// dispatch to virtual event dispatcher
+		virtual void dispatch(WindowEventDispatcher &wed) const = 0;
+
+		// dispatch to origin window
+		void dispatchOrigin() const;
+
+		virtual ~window_event() { }
+	};
+
+	// ???
+	struct window_refresh_event : public window_event {
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowRefreshEvent(*this);
+		}
+	};
+
+	// window about to be closed
+	struct window_close_event : public window_event {
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowCloseEvent(*this);
+		}
+	};
+
+	// window position changed
+	struct window_pos_event : public window_event {
+		point2i pos;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowPosEvent(*this);
+		}
+	};
+
+	// window size changed
+	struct window_size_event : public window_event {
+		size2i size;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowSizeEvent(*this);
+		}
+	};
+
+	// window focused / unfocused
+	struct window_focus_event : public window_event {
+		bool focused;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowFocusEvent(*this);
+		}
+	};
+
+	// window iconified (minimized) / deiconified (restored)
+	struct window_icon_event : public window_event {
+		bool iconified;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchWindowIconEvent(*this);
+		}
+	};
+
+	// mouse moved
+	struct mouse_event : public window_event {
+		point2d pos;
+		bool entered;
+		bool exited;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchMouseEvent(*this);
+		}
+	};
+
+	// mouse button pressed / released
+	struct mouse_button_event : public mouse_event {
+		int button;
+		int action;
+		int mods;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchMouseButtonEvent(*this);
+		}
+	};
+
+	// mouse (wheel) scrolled
+	struct mouse_scroll_event : public mouse_event {
+		size2d offset;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchMouseScrollEvent(*this);
+		}
+	};
+
+	// key pressed / released
+	struct key_event : public window_event {
+		int key;
+		int scancode;
+		int action;
+		int mods;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchKeyEvent(*this);
+		}
+	};
+
+	// unicode character typed
+	struct char_event : public window_event {
+		unsigned codepoint;
+
+		virtual void dispatch(WindowEventDispatcher &wed) const override {
+			wed.dispatchCharEvent(*this);
+		}
+	};
+
+	// handles dispatched events and forwards them to subscribers
+	class WindowEventProxy : public WindowEventDispatcher, private Uncopyable {
+	public:
+		Event<window_event> onEvent;
+		Event<window_pos_event> onMove;
+		Event<window_size_event> onResize;
+		Event<window_refresh_event> onRefresh;
+		Event<window_close_event> onClose;
+		Event<window_focus_event> onFocus;
+		Event<window_focus_event> onFocusGain;
+		Event<window_focus_event> onFocusLose;
+		Event<window_icon_event> onIcon;
+		Event<window_icon_event> onMinimize;
+		Event<window_icon_event> onRestore;
+		Event<mouse_button_event> onMouseButton;
+		Event<mouse_button_event> onMouseButtonPress;
+		Event<mouse_button_event> onMouseButtonRelease;
+		Event<mouse_event> onMouseMove;
+		Event<mouse_event> onMouseEnter;
+		Event<mouse_event> onMouseExit;
+		Event<mouse_scroll_event> onMouseScroll;
+		Event<key_event> onKey;
+		Event<key_event> onKeyPress;
+		Event<key_event> onKeyRelease;
+		Event<char_event> onChar;
+
+		// helper method; subscribes an event dispatcher to onEvent
+		subscription subscribeEventDispatcher(std::shared_ptr<WindowEventDispatcher> proxy) {
+			return onEvent.subscribe([=](const window_event &e) {
+				e.dispatch(*proxy);
+				return false;
+			});
+		}
+
+		virtual void dispatchWindowRefreshEvent(const window_refresh_event &) override;
+		virtual void dispatchWindowCloseEvent(const window_close_event &) override;
+		virtual void dispatchWindowPosEvent(const window_pos_event &) override;
+		virtual void dispatchWindowSizeEvent(const window_size_event &) override;
+		virtual void dispatchWindowFocusEvent(const window_focus_event &) override;
+		virtual void dispatchWindowIconEvent(const window_icon_event &) override;
+		virtual void dispatchMouseEvent(const mouse_event &) override;
+		virtual void dispatchMouseButtonEvent(const mouse_button_event &) override;
+		virtual void dispatchMouseScrollEvent(const mouse_scroll_event &) override;
+		virtual void dispatchKeyEvent(const key_event &) override;
+		virtual void dispatchCharEvent(const char_event &) override;
+	};
+
 
 	class window_error : public std::runtime_error {
 	public:
@@ -166,7 +348,7 @@ namespace gecom {
 
 	// Thin wrapper around GLFW windowing.
 	// Each window can only be used on one thread at once.
-	class Window : private gecom::Uncopyable {
+	class Window : public WindowEventProxy {
 	private:
 		// the wrapped window
 		GLFWwindow* m_handle;
@@ -178,29 +360,6 @@ namespace gecom {
 		void destroy();
 
 	public:
-		// events
-		gecom::Event<window_pos_event> onMove;
-		gecom::Event<window_size_event> onResize;
-		gecom::Event<window_event> onClose;
-		gecom::Event<window_event> onRefresh;
-		gecom::Event<window_focus_event> onFocus;
-		gecom::Event<window_focus_event> onFocusGain;
-		gecom::Event<window_focus_event> onFocusLose;
-		gecom::Event<window_icon_event> onIcon;
-		gecom::Event<window_icon_event> onMinimise;
-		gecom::Event<window_icon_event> onRestore;
-		gecom::Event<mouse_button_event> onMouse;
-		gecom::Event<mouse_button_event> onMousePress;
-		gecom::Event<mouse_button_event> onMouseRelease;
-		gecom::Event<mouse_event> onMouseMove;
-		gecom::Event<mouse_event> onMouseEnter;
-		gecom::Event<mouse_event> onMouseExit;
-		gecom::Event<mouse_scroll_event> onScroll;
-		gecom::Event<key_event> onKey;
-		gecom::Event<key_event> onKeyPress;
-		gecom::Event<key_event> onKeyRelease;
-		gecom::Event<char_event> onChar;
-
 		// ctor: takes ownership of a GLFW window handle
 		Window(GLFWwindow *handle_, const Window *share = nullptr) : m_handle(handle_) {
 			if (m_handle == nullptr) throw window_error("GLFW window handle is null");
@@ -211,7 +370,7 @@ namespace gecom {
 			}
 			initialize();
 		}
-
+		
 		GLFWwindow * handle() const {
 			return m_handle;
 		}
@@ -320,6 +479,11 @@ namespace gecom {
 
 		static Window * currentContext();
 	};
+
+	inline void window_event::dispatchOrigin() const {
+		// inheritance of Window from WindowEventDispatcher is not known until after definition on Window
+		dispatch(*window);
+	}
 
 	class create_window_args {
 	private:

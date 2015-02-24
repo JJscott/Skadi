@@ -1,6 +1,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include "Camera.hpp"
 #include "Graph.hpp"
@@ -18,6 +19,13 @@ namespace skadi {
 			graph = new Graph();
 			camera = new EditorCamera(win, initial3d::vec3d());
 			window = win;
+
+			// subscribe to events through this proxy
+			// allows event dispatch to this 'component' to be enabled / disabled
+			// using .forever() on a local subscription to this proxy is ok
+			weproxy = std::make_shared<gecom::WindowEventProxy>();
+			weproxy_sub = win->subscribeEventDispatcher(weproxy);
+
 			size = s;
 
 			brush = NodeBrush::inst();
@@ -28,7 +36,7 @@ namespace skadi {
 
 			// Listen for mouse movement
 			//
-			win->onMouseMove.subscribe([&](const gecom::mouse_event &e) {
+			weproxy->onMouseMove.subscribe([&](const gecom::mouse_event &e) {
 				if (brush->isActive()) {
 					// Move the brush
 					//
@@ -49,7 +57,7 @@ namespace skadi {
 
 			// Listen for mouse click
 			//
-			win->onMousePress.subscribe([&](const gecom::mouse_button_event &e) {
+			weproxy->onMouseButtonPress.subscribe([&](const gecom::mouse_button_event &e) {
 				if (!brush->isActive()) {
 					//Calculate What nodes are in area
 					//
@@ -66,7 +74,7 @@ namespace skadi {
 				return false; // Nessesary
 			}).forever();
 
-			win->onMouseRelease.subscribe([&](const gecom::mouse_button_event &e) {
+			weproxy->onMouseButtonRelease.subscribe([&](const gecom::mouse_button_event &e) {
 				//Calculate What nodes are in area
 				//
 				initial3d::vec3f relativePos = brushRelativePosition(brush_position);
@@ -86,7 +94,7 @@ namespace skadi {
 
 			// Listen for key presses
 			//
-			win->onKeyPress.subscribe([&](const gecom::key_event &e) {
+			weproxy->onKeyPress.subscribe([&](const gecom::key_event &e) {
 				if (e.key == GLFW_KEY_LEFT_BRACKET) {
 					brush_radius = brush_radius - 1;
 				}
@@ -431,6 +439,13 @@ namespace skadi {
 
 		Graph *getGraph() { return graph; }
 
+		bool enableEventDispatch(bool b) {
+			if (weproxy_sub.enable(b)) {
+				// e.g. generate synthetic focus gained / lost events
+				return true;
+			}
+			return false;
+		}
 
 	private:
 		
@@ -456,10 +471,14 @@ namespace skadi {
 			return mat * mousePosition;
 		};
 
+		// window and event handling
+		gecom::Window *window;
+		std::shared_ptr<gecom::WindowEventProxy> weproxy;
+		gecom::subscription weproxy_sub;
+
 		//
 		//
 		Camera *camera;
-		gecom::Window *window;
 		int size;
 
 		// Graph

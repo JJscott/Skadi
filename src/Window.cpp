@@ -34,7 +34,7 @@ namespace gecom {
 			window_pos_event e;
 			e.window = win;
 			e.pos = point2i(x, y);
-			win->onMove.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackWindowSize(GLFWwindow *handle, int w, int h) {
@@ -42,21 +42,21 @@ namespace gecom {
 			window_size_event e;
 			e.window = win;
 			e.size = size2i(w, h);
-			win->onResize.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackWindowClose(GLFWwindow *handle) {
 			Window *win = getWindow(handle);
-			window_event e;
+			window_close_event e;
 			e.window = win;
-			win->onClose.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackWindowRefresh(GLFWwindow *handle) {
 			Window *win = getWindow(handle);
-			window_event e;
+			window_refresh_event e;
 			e.window = win;
-			win->onRefresh.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackWindowFocus(GLFWwindow *handle, int focused) {
@@ -69,12 +69,7 @@ namespace gecom {
 			window_focus_event e;
 			e.window = wd->window;
 			e.focused = focused;
-			wd->window->onFocus.notify(e);
-			if (focused) {
-				wd->window->onFocusGain.notify(e);
-			} else {
-				wd->window->onFocusLose.notify(e);
-			}
+			e.dispatchOrigin();
 		}
 
 		void callbackWindowIconify(GLFWwindow *handle, int iconified) {
@@ -82,15 +77,13 @@ namespace gecom {
 			window_icon_event e;
 			e.window = win;
 			e.iconified = iconified;
-			win->onIcon.notify(e);
-			if (iconified) {
-				win->onMinimise.notify(e);
-			} else {
-				win->onRestore.notify(e);
-			}
+			e.dispatchOrigin();
 		}
 
 		void callbackFramebufferSize(GLFWwindow *handle, int w, int h) {
+			(void) handle;
+			(void) w;
+			(void) h;
 			// TODO
 		}
 
@@ -110,12 +103,7 @@ namespace gecom {
 			e.entered = false;
 			e.exited = false;
 			glfwGetCursorPos(handle, &e.pos.x, &e.pos.y);
-			wd->window->onMouse.notify(e);
-			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-				wd->window->onMousePress.notify(e);
-			} else {
-				wd->window->onMouseRelease.notify(e);
-			}
+			e.dispatchOrigin();
 		}
 
 		void callbackCursorPos(GLFWwindow *handle, double x, double y) {
@@ -125,7 +113,7 @@ namespace gecom {
 			e.pos = point2d(x, y);
 			e.entered = false;
 			e.exited = false;
-			win->onMouseMove.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackCursorEnter(GLFWwindow *handle, int entered) {
@@ -135,12 +123,7 @@ namespace gecom {
 			glfwGetCursorPos(handle, &e.pos.x, &e.pos.y);
 			e.entered = entered;
 			e.exited = !entered;
-			win->onMouseMove.notify(e);
-			if (entered) {
-				win->onMouseEnter.notify(e);
-			} else {
-				win->onMouseExit.notify(e);
-			}
+			e.dispatchOrigin();
 		}
 
 		void callbackScroll(GLFWwindow *handle, double xoffset, double yoffset) {
@@ -151,7 +134,7 @@ namespace gecom {
 			e.entered = false;
 			e.exited = false;
 			e.offset = size2d(xoffset, yoffset);
-			win->onScroll.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackKey(GLFWwindow *handle, int key, int scancode, int action, int mods) {
@@ -167,12 +150,7 @@ namespace gecom {
 			e.scancode = scancode;
 			e.action = action;
 			e.mods = mods;
-			wd->window->onKey.notify(e);
-			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-				wd->window->onKeyPress.notify(e);
-			} else {
-				wd->window->onKeyRelease.notify(e);
-			}
+			e.dispatchOrigin();
 		}
 
 		void callbackChar(GLFWwindow *handle, unsigned codepoint) {
@@ -180,7 +158,7 @@ namespace gecom {
 			char_event e;
 			e.window = win;
 			e.codepoint = codepoint;
-			win->onChar.notify(e);
+			e.dispatchOrigin();
 		}
 
 		void callbackErrorGLFW(int error, const char *description) {
@@ -188,6 +166,7 @@ namespace gecom {
 		}
 
 		void callbackErrorGLAER(const char *msg) {
+			(void) msg;
 			// as yet, GLAER never calls this
 		}
 
@@ -227,6 +206,9 @@ namespace gecom {
 			// enum documentation:
 			// https://www.opengl.org/sdk/docs/man4/html/glDebugMessageControl.xhtml
 			
+			(void) length;
+			(void) userParam;
+
 			bool exceptional = false;
 
 			// message source within GL -> log source
@@ -327,6 +309,83 @@ namespace gecom {
 
 		}
 
+	}
+
+	void WindowEventProxy::dispatchWindowRefreshEvent(const window_refresh_event &e) {
+		onEvent.notify(e);
+		onRefresh.notify(e);
+	}
+
+	void WindowEventProxy::dispatchWindowCloseEvent(const window_close_event &e) {
+		onEvent.notify(e);
+		onClose.notify(e);
+	}
+
+	void WindowEventProxy::dispatchWindowPosEvent(const window_pos_event &e) {
+		onEvent.notify(e);
+		onMove.notify(e);
+	}
+
+	void WindowEventProxy::dispatchWindowSizeEvent(const window_size_event &e) {
+		onEvent.notify(e);
+		onResize.notify(e);
+	}
+
+	void WindowEventProxy::dispatchWindowFocusEvent(const window_focus_event &e) {
+		onEvent.notify(e);
+		onFocus.notify(e);
+		if (e.focused) {
+			onFocusGain.notify(e);
+		} else {
+			onFocusLose.notify(e);
+		}
+	}
+
+	void WindowEventProxy::dispatchWindowIconEvent(const window_icon_event &e) {
+		onEvent.notify(e);
+		onIcon.notify(e);
+		if (e.iconified) {
+			onMinimize.notify(e);
+		} else {
+			onRestore.notify(e);
+		}
+	}
+
+	void WindowEventProxy::dispatchMouseEvent(const mouse_event &e) {
+		onEvent.notify(e);
+		onMouseMove.notify(e);
+		if (e.entered) onMouseEnter.notify(e);
+		if (e.exited) onMouseExit.notify(e);
+	}
+
+	void WindowEventProxy::dispatchMouseButtonEvent(const mouse_button_event &e) {
+		onEvent.notify(e);
+		onMouseButton.notify(e);
+		if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+			onMouseButtonPress.notify(e);
+		} else if (e.action == GLFW_RELEASE) {
+			onMouseButtonRelease.notify(e);
+		}
+	}
+
+	void WindowEventProxy::dispatchMouseScrollEvent(const mouse_scroll_event &e) {
+		onEvent.notify(e);
+		onMouseScroll.notify(e);
+	}
+
+	void WindowEventProxy::dispatchKeyEvent(const key_event &e) {
+		onEvent.notify(e);
+		onKey.notify(e);
+		if (e.action == GLFW_PRESS || e.action == GLFW_REPEAT) {
+			onKeyPress.notify(e);
+		} else if (e.action == GLFW_RELEASE) {
+			onKeyRelease.notify(e);
+		}
+	}
+
+	void WindowEventProxy::dispatchCharEvent(const char_event &e) {
+		onEvent.notify(e);
+		onChar.notify(e);
 	}
 
 	GlaerContext * getCurrentGlaerContext() {

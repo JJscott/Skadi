@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <chrono>
+#include <utility>
 
 #include "GECom.hpp"
 #include "Log.hpp"
@@ -50,46 +51,66 @@ namespace gecom {
 
 	};
 
-	// generic subscription class. wraps a cancellation function, and automatically
-	// calls it when destroyed. individual subscription objects should not be shared
+	// Generic subscription class. Wraps a cancellation function, and automatically
+	// calls it when destroyed. Individual subscription objects should not be shared
 	// between threads, but cancellation itself is as threadsafe as the supplied function.
-	// in the case of Event classes, cancellation is threadsafe, and does not require
-	// the event to not have been deleted.
+	// In the case of Event classes, cancellation is threadsafe, and does not require
+	// the event to not have been deleted. Also wraps an (optional) enabler function,
+	// that can be used to temporarily enable / disable the subscription.
 	class subscription {
 	public:
 		using cancel_t = std::function<bool()>;
+		using enable_t = std::function<bool(bool)>;
 
 	private:
 		cancel_t m_cancel;
+		enable_t m_enable;
 
 	public:
-		// default ctor: has no cancellation function
-		inline subscription() { }
+		// default ctor: has no cancellation function or enabler function
+		subscription() { }
 
-		// ctor: provide cancellation function
-		inline subscription(const cancel_t &cancel_) : m_cancel(cancel_) { }
+		// ctor: provide cancellation function and optionally enabler function
+		subscription(cancel_t cancel_, enable_t enable_ = enable_t()) :
+			m_cancel(std::move(cancel_)), m_enable(std::move(enable_))
+		{ }
 
 		// not copyable
-		inline subscription(const subscription &other) = delete;
-		inline subscription & operator=(const subscription &other) = delete;
+		subscription(const subscription &other) = delete;
+		subscription & operator=(const subscription &other) = delete;
 
 		// move ctor: take over cancellation responsibility
-		inline subscription(subscription &&other) : m_cancel(std::move(other.m_cancel)) { }
+		subscription(subscription &&other) :
+			m_cancel(std::move(other.m_cancel)),
+			m_enable(std::move(other.m_enable))
+		{ }
 
 		// move assign: cancel current subscription (if any) and then take over cancellation responsibility
-		inline subscription & operator=(subscription &&other) {
+		subscription & operator=(subscription &&other) {
 			cancel();
 			m_cancel = std::move(other.m_cancel);
+			m_enable = std::move(other.m_enable);
 			return *this;
 		}
 
 		// explicitly cancel this subscription.
 		// returns true iff cancellation actually happened.
-		inline bool cancel() {
+		bool cancel() {
 			if (m_cancel) {
 				bool r = m_cancel();
+				// after cancelling, subscription cannot be cancelled or enabled / disabled
 				m_cancel = cancel_t();
+				m_enable = enable_t();
 				return r;
+			}
+			return false;
+		}
+
+		// enable or disable subscription.
+		// returns true if enable state was changed.
+		bool enable(bool b) {
+			if (m_enable) {
+				return m_enable(b);
 			}
 			return false;
 		}
@@ -98,12 +119,13 @@ namespace gecom {
 		// in the case of Event subscriptions, the associated observer can no longer
 		// be detached from 'outside'; it will live as long as the event does, unless
 		// the observer function itself requests to be detached by returning true.
-		inline void forever() {
+		// this does not prevent the subscription from being enabled / disabled.
+		void forever() {
 			m_cancel = cancel_t();
 		}
 
 		// dtor: cancel current subscription (if any)
-		inline ~subscription() {
+		~subscription() {
 			cancel();
 		}
 	};
@@ -111,7 +133,7 @@ namespace gecom {
 	// event dispatch mechanism.
 	// thread safe, but beware destroying an event while another thread is trying to use it.
 	// use shared_ptr for things like that (did i even need to say that? it should be obvious).
-	template <class EventArgT>
+	template <typename EventArgT>
 	class Event : private Uncopyable {
 	public:
 		// return true to detach
@@ -132,10 +154,10 @@ namespace gecom {
 			std::mutex mutex;
 			// next observer attachment key
 			unsigned next_key = 0;
-			// observer callbacks
-			std::unordered_map<unsigned, observer_t> observers;
+			// observers: enabled + callback
+			std::unordered_map<unsigned, std::pair<bool, observer_t>> observers;
 
-			inline observer_registry_t() { }
+			 observer_registry_t() { }
 		};
 
 		// returned subscriptions maintain a weak_ptr to this so cancellation
@@ -148,11 +170,11 @@ namespace gecom {
 			unsigned *m_waiters;
 
 		public:
-			inline waiter_guard(unsigned *waiters_) : m_waiters(waiters_) {
+			waiter_guard(unsigned *waiters_) : m_waiters(waiters_) {
 				(*m_waiters)++;
 			}
 
-			inline ~waiter_guard() {
+			~waiter_guard() {
 				(*m_waiters)--;
 			}
 		};
@@ -163,27 +185,47 @@ namespace gecom {
 		// subscribe an observer to this event.
 		// the observer will be removed when the returned subscription is destroyed or
 		// has cancel() otherwise called on it, or when the event is destroyed, whichever is first.
-		inline subscription subscribe(const observer_t &func) {
+		subscription subscribe(const observer_t &func) {
 			std::lock_guard<std::mutex> lock(m_registry->mutex);
 			unsigned key = m_registry->next_key++;
-			m_registry->observers[key] = func;
-			// cancellation function keeps a weak_ptr to the observer registry
+			m_registry->observers[key] = std::make_pair(true, func);
+			// subscription functions keeps a weak_ptr to the observer registry
 			auto wpreg = std::weak_ptr<observer_registry_t>(m_registry);
-			return subscription([=]() {
-				auto spreg = wpreg.lock();
-				// if we can't lock the pointer, event has gone byebye
-				if (spreg) {
-					// got a shared_ptr to the registry, so we can manipulate it
-					// without worrying about it being deleted
-					std::lock_guard<std::mutex> lock2(spreg->mutex);
-					return bool(spreg->observers.erase(key));
+			return subscription(
+				// cancellation function
+				[=]() {
+					auto spreg = wpreg.lock();
+					// if we can't lock the pointer, event has gone byebye
+					if (spreg) {
+						// got a shared_ptr to the registry, so we can manipulate it
+						// without worrying about it being deleted
+						std::lock_guard<std::mutex> lock2(spreg->mutex);
+						return bool(spreg->observers.erase(key));
+					}
+					return false;
+				},
+				// enabler function
+				[=](bool b) {
+					auto spreg = wpreg.lock();
+					if (spreg) {
+						std::lock_guard<std::mutex> lock2(spreg->mutex);
+						auto it = spreg->observers.find(key);
+						if (it != spreg->observers.end()) {
+							// key is in registry (this is good, its supposed to be)
+							if (b != it->second.first) {
+								it->second.first = b;
+								// return true iff enable state changed
+								return true;
+							}
+						}
+					}
+					return false;
 				}
-				return false;
-			});
+			);
 		}
 
 		// notify this event; wakes all waiting threads
-		inline void notify(const EventArgT &e) {
+		void notify(const EventArgT &e) {
 			{
 				// use a new scope so the condition is notified are the mutexes are unlocked
 				std::lock_guard<std::mutex> lock(m_registry->mutex);
@@ -194,9 +236,12 @@ namespace gecom {
 				if (!m_registry->observers.empty()) {
 					// keep a list of observers requesting detachment while calling them
 					std::vector<unsigned> detach_keys;
-					for (auto pair : m_registry->observers) {
-						if (pair.second(e)) {
-							detach_keys.push_back(pair.first);
+					for (const auto &entry : m_registry->observers) {
+						// skip if disabled
+						if (!entry.second.first) continue;
+						// call observer
+						if (entry.second.second(e)) {
+							detach_keys.push_back(entry.first);
 						}
 					}
 					// perform detachments
@@ -210,7 +255,7 @@ namespace gecom {
 		}
 
 		// wait on this event; returns true if the event was fired
-		inline bool wait() {
+		bool wait() {
 			// no need to lock the observer registry
 			std::unique_lock<std::mutex> lock(m_mutex);
 			waiter_guard waiter(&m_waiters);
@@ -224,7 +269,7 @@ namespace gecom {
 
 		// TODO timed wait etc
 
-		virtual inline ~Event() {
+		virtual ~Event() {
 			// no need to lock the observer registry
 			// interrupt all waiting threads, then wait for them to unlock the mutex
 			auto time0 = std::chrono::steady_clock::now();
@@ -346,7 +391,7 @@ namespace gecom {
 						task_t task;
 						try {
 							task = m_fast_queue.pop();
-						} catch (interruption &e) {
+						} catch (interruption &) {
 							// thread needs to quit
 							log("AsyncExec:fast") << "Interrupted, exiting";
 							break;
@@ -366,7 +411,7 @@ namespace gecom {
 						task_t task;
 						try {
 							task = m_slow_queue.pop();
-						} catch (interruption &e) {
+						} catch (interruption &) {
 							// thread needs to quit
 							log("AsyncExec:slow") << "Interrupted, exiting";
 							break;
