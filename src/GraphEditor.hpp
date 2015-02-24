@@ -20,7 +20,7 @@ namespace skadi {
 			window = win;
 			size = s;
 
-			brush = NullBrush::inst();
+			brush = NodeBrush::inst();
 
 			// Brush
 			//
@@ -67,12 +67,18 @@ namespace skadi {
 			}).forever();
 
 			win->onMouseRelease.subscribe([&](const gecom::mouse_button_event &e) {
+				//Calculate What nodes are in area
+				//
+				initial3d::vec3f relativePos = brushRelativePosition(brush_position);
+				float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
+
+
 				if (brush->isActive()) {
 					if (e.button == GLFW_MOUSE_BUTTON_1 && !brush->isAlt()) {
-						brush->deactivate();
+						brush->deactivate(relativePos, relativeRadius, graph);
 					}
 					else if (e.button == GLFW_MOUSE_BUTTON_2 && brush->isAlt()) {
-						brush->deactivate();
+						brush->deactivate(relativePos, relativeRadius, graph);
 					}
 				}
 				return false; // Nessesary
