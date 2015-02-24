@@ -321,7 +321,7 @@ namespace skadi {
 		bh_tree bht0;
 		
 		// build tree of nodes that wont move (or otherwise change)
-		// NOTE this is very slow with VS debugger attached, even a release-mode build
+		// NOTE this is slow with VS debugger attached, even a release-mode build
 		for (auto n : nodes) {
 			if (n->fixed || find(active_nodes.begin(), active_nodes.end(), n) == active_nodes.end()) {
 				// node fixed or not active
@@ -335,17 +335,8 @@ namespace skadi {
 
 		// run steps
 		for (int step = 0; step < steps; step++) {
-
-			// get average speed
+			
 			float speed_sum = 0.f;
-#pragma omp parallel for reduction(+:speed_sum)
-			for (int i = 0; i < nodes0.size(); i++) {
-				Node *n0 = nodes0[i];
-				speed_sum += n0->velocity.mag();
-			}
-
-			// TODO tune threshold
-			//if (speed_sum / nodes0.size() < 2.f) return step;
 
 			// add moving nodes to new tree
 			bh_tree bht(bht0);
@@ -353,8 +344,8 @@ namespace skadi {
 				bht.insert(n);
 			}
 
-			// calculate forces, accelerations, velocities
-#pragma omp parallel for
+			// calculate forces, accelerations, velocities; get average speed
+#pragma omp parallel for reduction(+:speed_sum)
 			for (int i = 0; i < nodes0.size(); i++) {
 				Node *n0 = nodes0[i];
 
@@ -382,6 +373,7 @@ namespace skadi {
 				// damping
 				n0->velocity *= 0.995;
 
+				speed_sum += n0->velocity.mag();
 			}
 
 			// update positions
@@ -391,6 +383,8 @@ namespace skadi {
 				n0->position += n0->velocity * timestep;
 			}
 
+			// TODO tune threshold
+			if (speed_sum / nodes0.size() < 2.f) return step;
 		}
 
 		return steps;

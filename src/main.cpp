@@ -3,6 +3,9 @@
 #include <sstream>
 #include <vector>
 #include <stdexcept>
+#include <thread>
+
+#include <omp.h>
 
 #include "Brush.hpp"
 #include "Camera.hpp"
@@ -105,6 +108,13 @@ void displayEditor(int w, int h) {
 
 
 int main() {
+
+	if (std::thread::hardware_concurrency()) {
+		// leave a thread for UI
+		unsigned tc = std::thread::hardware_concurrency() - 1;
+		omp_set_num_threads(tc);
+		gecom::log("OMP") << "Default thread count: " << tc;
+	}
 
 	const int size = 512;
 

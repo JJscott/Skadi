@@ -28,7 +28,7 @@ namespace skadi {
 			void removeEdge(Edge *e) { edges.erase(e); }
 			bool containsEdge(Edge *e) const { return edges.find(e) != edges.end(); }
 
-			initial3d::vec3f position; //values of [0,1]
+			initial3d::float3 position; //values of [0,1]
 
 			// for layout
 			initial3d::float3 velocity;
