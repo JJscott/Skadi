@@ -28,7 +28,6 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 	static int size =  513;
 	static Heightmap *hm = nullptr;
 
-
 	if (hm == nullptr) {
 		Graph *g = new Graph();
 
@@ -58,6 +57,7 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 		hm->setScale(initial3d::vec3d(5, 5, 5));
 		hm->setHeights(&ele[0], size, size);
 	}
+
 	hm->draw(worldViewMat, projMat);
 }
 
@@ -84,6 +84,9 @@ void display(int w, int h) {
 
 void displayEditor(int w, int h) {
 	graphEditor->update();
+
+	Graph *g = graphEditor->getGraph();
+	g->doLayout(10, g->getNodes());
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

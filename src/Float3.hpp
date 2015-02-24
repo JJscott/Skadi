@@ -14,6 +14,7 @@
 #include <cmath>
 
 #include <xmmintrin.h>
+#include <emmintrin.h>
 
 #include "Initial3D.hpp"
 
@@ -85,7 +86,7 @@ namespace initial3d {
 			return float3(*this) += rhs;
 		}
 
-		friend float3 operator+(float lhs, const float3 &rhs) {
+		inline friend float3 operator+(float lhs, const float3 &rhs) {
 			return float3(rhs) + lhs;
 		}
 
@@ -196,8 +197,21 @@ namespace initial3d {
 			return float3(_mm_min_ps(x.m_data, y.m_data));
 		}
 
-		static float3 lerp(const float3 &a, const float3 &b, float t) {
+		static float3 mixf(const float3 &a, const float3 &b, const float3 &t) {
 			return a * (1.f - t) + b * t;
+		}
+
+		static float3 mixf(const float3 &a, const float3 &b, float t) {
+			return a * (1.f - t) + b * t;
+		}
+
+		static float3 mixb(const float3 &a, const float3 &b, const float3 &t) {
+			return float3(_mm_or_ps(_mm_andnot_ps(t.data(), a.data()), _mm_and_ps(t.data(), b.data())));
+		}
+
+		static float3 mixb(const float3 &a, const float3 &b, bool t) {
+			float3 tt(_mm_cmpneq_ps(_mm_setzero_ps(), _mm_castsi128_ps(_mm_set1_epi8(t))));
+			return mixb(a, b, tt);
 		}
 
 		static float dot(const float3 &lhs, const float3 &rhs) {

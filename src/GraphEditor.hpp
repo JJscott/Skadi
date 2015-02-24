@@ -104,6 +104,8 @@ namespace skadi {
 			Graph::Node *n8 = graph->addNode(initial3d::vec3f(0.62, 0.9, 0),  0.7, 0.0);
 			Graph::Node *n9 = graph->addNode(initial3d::vec3f(0.76, 0.82, 0), 0.7, 0.0);
 
+			n1->fixed = true;
+
 			graph->addEdge(n1, n2);
 			graph->addEdge(n1, n3);
 			graph->addEdge(n1, n4);
@@ -336,7 +338,7 @@ namespace skadi {
 			// Upload positions
 			//
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
-			glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_STATIC_DRAW); // Only upload once
+			glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_DYNAMIC_DRAW);
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
@@ -347,7 +349,7 @@ namespace skadi {
 			// Upload indices
 			//
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_edge_idx); // this sticks to the vao
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_STATIC_DRAW);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_DYNAMIC_DRAW);
 
 			// Upload positions
 			//

@@ -1,5 +1,7 @@
 
 #include <unordered_set>
+#include <algorithm>
+#include <iterator>
 
 #include "Graph.hpp"
 
@@ -15,6 +17,8 @@ namespace {
 	private:
 		using set_t = unordered_set<Graph::Node *>;
 
+		static const int max_leaf_elements = 8;
+
 		class bh_node {
 		private:
 			aabb m_bound;
@@ -25,19 +29,19 @@ namespace {
 			float m_charge = 0;
 			bool m_isleaf = true;
 
-			inline unsigned childID(const float3 &p) const {
+			unsigned childID(const float3 &p) const {
 				return 0x3 & _mm_movemask_ps((p >= m_bound.center()).data());
 			}
 
 			// mask is true where cid bit is _not_ set
-			inline __m128 childInvMask(unsigned cid) const {
+			__m128 childInvMask(unsigned cid) const {
 				__m128i m = _mm_set1_epi32(cid);
 				m = _mm_and_si128(m, _mm_set_epi32(0, 4, 2, 1));
 				m = _mm_cmpeq_epi32(_mm_setzero_si128(), m);
 				return _mm_castsi128_ps(m);
 			}
 
-			inline aabb childBound(unsigned cid) const {
+			aabb childBound(unsigned cid) const {
 				// positive / negative halfsizes
 				__m128 h = m_bound.halfsize().data();
 				__m128 g = _mm_sub_ps(_mm_setzero_ps(), h);
@@ -52,10 +56,25 @@ namespace {
 				return aabb::fromPoints(c, c + vr);
 			}
 
-			inline void unleafify();
+			void unleafify();
+			void leafify();
+
+			void dump(set_t &values) {
+				// move values out of this node
+				for (auto v : m_values) {
+					values.insert(v);
+				}
+				// move values out of child nodes
+				for (bh_node **pn = m_children + 4; pn --> m_children; ) {
+					if (*pn) (*pn)->dump(values);
+				}
+				// safety
+				m_values.clear();
+				m_count = 0;
+			}
 
 		public:
-			inline bh_node(const aabb &a_) : m_bound(a_), m_coc(a_.center()) {
+			bh_node(const aabb &a_) : m_bound(a_), m_coc(a_.center()) {
 				// clear child pointers
 				std::memset(m_children, 0, 4 * sizeof(bh_node *));
 			}
@@ -81,16 +100,16 @@ namespace {
 
 			bh_node & operator=(const bh_node &) = delete;
 
-			inline aabb bound() const {
+			aabb bound() const {
 				return m_bound;
 			}
 
-			inline size_t count() const {
+			size_t count() const {
 				return m_count;
 			}
 
-			inline bool insert(Graph::Node *n, bool reinsert = false) {
-				if (m_isleaf && m_count < 8) {
+			bool insert(Graph::Node *n, bool reinsert = false) {
+				if (m_isleaf && m_count < max_leaf_elements) {
 					if (!m_values.insert(n).second) return false;
 				} else {
 					// not a leaf or should not be
@@ -113,7 +132,20 @@ namespace {
 				return true;
 			}
 
-			inline float3 force(Graph::Node *n0) const {
+			void put_child(bh_node *child) {
+				unsigned cid = childID(child->bound().center());
+				assert(!m_children[cid]);
+				m_children[cid] = child;
+				m_count += child->count();
+				// need to ensure the child is added properly
+				unleafify();
+				if (m_count <= max_leaf_elements) {
+					// if this should actually be a leaf after all
+					leafify();
+				}
+			}
+
+			float3 force(Graph::Node *n0) const {
 
 				// can we treat this node as one charge?
 				// compare bound width to distance from node to centre-of-charge
@@ -159,7 +191,7 @@ namespace {
 				return f;
 			}
 
-			inline ~bh_node() {
+			~bh_node() {
 				for (bh_node **pn = m_children + 4; pn --> m_children; ) {
 					if (*pn) delete *pn;
 				}
@@ -170,37 +202,37 @@ namespace {
 		bh_node *m_root = nullptr;
 
 		// kill the z dimension of an aabb so this actually functions as a quadtree
-		static inline aabb sanitize(const aabb &a) {
+		static aabb sanitize(const aabb &a) {
 			float3 c = a.center();
 			float3 h = a.halfsize();
 			return aabb(float3(c.x(), c.y(), 0), float3(h.x(), h.y(), 0));
 		}
 
-		inline void destroy() {
+		void destroy() {
 			if (m_root) delete m_root;
 			m_root = nullptr;
 		}
 
 	public:
-		inline bh_tree() { }
+		bh_tree() { }
 
-		inline bh_tree(const aabb &rootbb) {
+		bh_tree(const aabb &rootbb) {
 			m_root = new bh_node(sanitize(rootbb));
 		}
 
-		inline bh_tree(const bh_tree &other) {
+		bh_tree(const bh_tree &other) {
 			destroy();
 			if (other.m_root) {
 				m_root = new bh_node(*other.m_root);
 			}
 		}
 
-		inline bh_tree(bh_tree &&other) {
+		bh_tree(bh_tree &&other) {
 			m_root = other.m_root;
 			other.m_root = nullptr;
 		}
 
-		inline bh_tree & operator=(const bh_tree &other) {
+		bh_tree & operator=(const bh_tree &other) {
 			destroy();
 			if (other.m_root) {
 				m_root = new bh_node(*other.m_root);
@@ -208,29 +240,46 @@ namespace {
 			return *this;
 		}
 
-		inline bh_tree & operator=(bh_tree &&other) {
+		bh_tree & operator=(bh_tree &&other) {
 			destroy();
 			m_root = other.m_root;
 			other.m_root = nullptr;
 			return *this;
 		}
 
-		inline bool insert(Graph::Node *n) {
+		bool insert(Graph::Node *n) {
 			if (!m_root) m_root = new bh_node(aabb(float3(0), float3(1, 1, 0)));
 			if (m_root->bound().contains(n->position)) {
 				return m_root->insert(n);
 			} else {
-				assert(false && "not implemented yet");
-				return false;
+				// make new root
+				bh_node * const oldroot = m_root;
+				const aabb a = m_root->bound();
+				// vector from centre of current root to centre of new element
+				const float3 vct = n->position - a.center();
+				// vector from current root to corner nearest centre of new element
+				float3 corner = a.halfsize();
+				corner = float3::mixb(corner, -corner, vct < 0.f);
+				// centre of new root
+				const float3 newcentre = a.center() + corner;
+				m_root = new bh_node(sanitize(aabb(newcentre, a.halfsize() * 2.f)));
+				if (oldroot->count() > 0) {
+					// only preserve old root if it had elements
+					m_root->put_child(oldroot);
+				} else {
+					delete oldroot;
+				}
+				// re-attempt to add
+				return insert(n);
 			}
 		}
 
-		inline float3 force(Graph::Node *n0) {
+		float3 force(Graph::Node *n0) {
 			if (!m_root) return float3(0);
 			return m_root->force(n0);
 		}
 
-		inline ~bh_tree() {
+		~bh_tree() {
 			destroy();
 		}
 
@@ -246,6 +295,19 @@ namespace {
 		}
 	}
 
+	inline void bh_tree::bh_node::leafify() {
+		if (!m_isleaf) {
+			m_isleaf = true;
+			// dump values in child nodes into this one
+			for (bh_node **pn = m_children + 4; pn --> m_children; ) {
+				if (*pn) {
+					(*pn)->dump(m_values);
+					delete *pn;
+					*pn = nullptr;
+				}
+			}
+		}
+	}
 
 }
 
@@ -255,8 +317,83 @@ namespace skadi {
 
 	int Graph::doLayout(int steps, const std::vector<Node *> &active_nodes) {
 
+		// tree of nodes that will not move
+		bh_tree bht0;
+		
+		// build tree of nodes that wont move (or otherwise change)
+		// NOTE this is very slow with VS debugger attached, even a release-mode build
+		for (auto n : nodes) {
+			if (n->fixed || find(active_nodes.begin(), active_nodes.end(), n) == active_nodes.end()) {
+				// node fixed or not active
+				bht0.insert(n);
+			}
+		}
 
-		return 0;
+		// nodes that will be moved
+		vector<Node *> nodes0;
+		copy_if(active_nodes.begin(), active_nodes.end(), back_inserter(nodes0), [](Node *n) { return !n->fixed; });
+
+		// run steps
+		for (int step = 0; step < steps; step++) {
+
+			// get average speed
+			float speed_sum = 0.f;
+#pragma omp parallel for reduction(+:speed_sum)
+			for (int i = 0; i < nodes0.size(); i++) {
+				Node *n0 = nodes0[i];
+				speed_sum += n0->velocity.mag();
+			}
+
+			// TODO tune threshold
+			//if (speed_sum / nodes0.size() < 2.f) return step;
+
+			// add moving nodes to new tree
+			bh_tree bht(bht0);
+			for (auto n : nodes0) {
+				bht.insert(n);
+			}
+
+			// calculate forces, accelerations, velocities
+#pragma omp parallel for
+			for (int i = 0; i < nodes0.size(); i++) {
+				Node *n0 = nodes0[i];
+
+				// acting force
+				float3 f;
+
+				// charge repulsion from every node
+				f += bht.force(n0);
+
+				// spring contraction from connected nodes
+				for (auto e : n0->getEdges()) {
+					// other node
+					Node *n1 = e->other(n0);
+					// direction is towards other node
+					float3 v = n1->position - n0->position;
+					f += e->spring * v; // spring constant
+				}
+
+				// acceleration
+				float3 a = f / n0->mass;
+
+				// velocity
+				n0->velocity += a * timestep;
+
+				// damping
+				n0->velocity *= 0.995;
+
+			}
+
+			// update positions
+#pragma omp parallel for
+			for (int i = 0; i < nodes0.size(); i++) {
+				Node *n0 = nodes0[i];
+				n0->position += n0->velocity * timestep;
+			}
+
+		}
+
+		return steps;
 	}
 
 
