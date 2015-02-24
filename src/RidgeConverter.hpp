@@ -50,6 +50,8 @@ namespace skadi {
 #include "Initial3D.hpp"
 #include "Graph.hpp"
 
+#define SHARP 1
+#define BU_SHARP 1
 
 // : note :
 //
@@ -246,7 +248,7 @@ namespace skadi {
 						int parIndex = getIdx(par);
 						float etemp = elevationEstimate(
 							elevation[ parIndex ],
-							-0.4,
+							SHARP,
 							distanceBetween(center, par));
 						// std::cout << " (" << par.x << "," << par.y << ") => " << etemp << std::endl;
 
@@ -285,6 +287,12 @@ namespace skadi {
 				initial3d::vec3f v1 = e->getNode1()->position;
 				initial3d::vec3f v2 = e->getNode2()->position;
 
+				float ne1 = e->getNode1()->elevation;
+				float ne2 = e->getNode2()->elevation;
+
+				float ns1 = e->getNode1()->sharpness;
+				float ns2 = e->getNode2()->sharpness;
+
 				std::vector<index> indices = getLine(
 					int(v1.x() * size), int(v2.x() * size),
 					int(v1.z() * size), int(v2.z() * size));
@@ -292,8 +300,8 @@ namespace skadi {
 				int i1 = 0;
 				int i2 = indices.size()-1;
 
-				addConstraint(indices[i1], v1.y(), 0);
-				addConstraint(indices[i2], v2.y(), 0);
+				addConstraint(indices[i1], ne1, ns1);
+				addConstraint(indices[i2], ne2, ns2);
 
 				std::function<void(int, int, float, float)> recursiveMD;
 				recursiveMD = [&](int i1, int i2, float e1, float e2) -> void {
@@ -307,7 +315,7 @@ namespace skadi {
 					recursiveMD(center, i2, centerElevation, e2);
 				};
 
-				recursiveMD(i1, i2, v1.y(), v2.y());
+				recursiveMD(i1, i2, ne1, ne2);
 			};
 
 
@@ -527,7 +535,7 @@ namespace skadi {
 						float e = elevationEstimate(
 							elevation[cellIndex],
 							// interpolationValue[ cellIndex ],
-							0.4,
+							BU_SHARP,
 							distanceBetween(cell, par));
 
 						parElevation += e;

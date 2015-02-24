@@ -21,23 +21,21 @@ namespace skadi {
 
 		class Node {
 		public:
-			Node(initial3d::float3 pos) : position(pos) {  }
-			Node(initial3d::float3 pos, float sharp) : position(pos), sharpness(sharp) {  }
+			Node(initial3d::vec3f pos, float ele = 0, float sharp = 0) : position(pos.x(), pos.y(), 0), elevation(ele), sharpness(sharp) {  }
 
 			const std::unordered_set<Edge *> & getEdges() const { return edges; }
 			void addEdge(Edge *e) { edges.emplace(e); }
 			void removeEdge(Edge *e) { edges.erase(e); }
 			bool containsEdge(Edge *e) const { return edges.find(e) != edges.end(); }
 
-			initial3d::float3 position; //values of [0,1]
+			initial3d::vec3f position; //values of [0,1]
 
 			// for layout
 			initial3d::float3 velocity;
 			float mass = 1.f;
 			float charge = 8.f;
 
-			// TODO elevation etc
-
+			float elevation = 0;
 			float sharpness = 0.f;
 			bool selected = false;
 			
@@ -97,8 +95,8 @@ namespace skadi {
 			return nullptr;
 		}
 
-		Node * addNode(initial3d::vec3f pos) {
-			Node *n = new Node(pos);
+		Node * addNode(initial3d::vec3f pos, float ele = 0, float sharp = 0) {
+			Node *n = new Node(pos, ele, sharp);
 			nodes.push_back(n);
 			return n;
 		}
