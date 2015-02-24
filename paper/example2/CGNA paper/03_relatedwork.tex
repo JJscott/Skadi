@@ -1,0 +1,100 @@
+\section{Related Work}
+
+%Survey of HMD (briefly)
+%Surveys of HMDs include those done by Rolland and Cakmakci\cite{rolland05:1} and Rolland and Hua\cite{rolland05:2}. 
+HMDs provide an immersive viewing environment appropriate for VR applications, and can be classified according to the configuration of the HMD's screen and optics. According to previous surveys~\cite{rolland05:1,rolland05:2}, HMDs fall into three categories: stereoscopic, where the illusion of depth is created by delivering images rendered from different angles to each eye; monoscopic, where  identical content is delivered to each eye; and bioptic where only a single display is present that is viewed by both eyes. The Oculus~\cite{OculusDK1} that we used for this paper is a stereoscopic HMD.\\
+
+\noindent \textbf{Simulator sickness:}
+In 1958, findings on the incidence of symptoms similar to motion sickness in users of the 2-F2-H Hover Trainer, a simulator for training helicopter pilots were released~\cite{miller58}. These symptoms would later come to be grouped under simulator sickness, ``a term used to describe the diverse signs or symptoms that have been experienced by flight crews during or after a training session in a flight simulator''~\cite{mccauley84} which is now used to describe ``discomfort [occurring] in a simulator of any kind''~\cite{johnson05}. Simulator sickness symptoms can be split into three groups~\cite{kennedy93}: oculomotor symptoms such as eye-strain, blurry vision, and headaches; disorientation symptoms such as dizziness and vertigo; and nausea symptoms such as changes in salivation and stomach awareness. Some symptoms may contribute towards overall discomfort in more than one group: blurry vision can be considered to contribute to both the oculomotor and disorientation discomfort categories, for example.\\
+
+Prior studies suggested specific hardware components such as helicopter simulator motion bases, or low update frequency CRT displays were responsible for causing simulator sickness~\cite{miller58}. It has since been found that simulator sickness symptoms also occur in HMDs~\cite{howarth97}, indicating such symptoms arise in a far greater variety of immersive VR applications than was initially expected.\\
+
+\noindent \textbf{Causes of simulator sickness on HMDs: }
+Previous studies have investigated factors that specifically lead to simulator sickness (as we refer to it, visual discomfort) on HMDs~\cite{kolasinski95, pausch92}. It was concluded that discomfort is caused by users undergoing motions that are abnormal when compared to reality (e.g. vection \cite{hettinger90}) or through the virtual environment not behaving in a manner that accurately simulates the expected visual stimuli. Early simulator sickness findings~\cite{miller58} support this as it was found that the more experience a pilot had in actual flight, the more severe their experienced discomfort would be in the simulator.\\
+
+% condensed: as they would better understand what motions should be occurring during flight, and be more perturbed by the differences between simulation and actual flight.\\
+
+\noindent \textbf{Reducing visual discomfort: }
+It has been found that viewing monoscopic content, or stereoscopic content with a very small angle of difference between the two images (micro-stereoscopic) caused less discomfort compared to viewing identical stereoscopic content~\cite{ehrlich96}: removing and/or minimising the vergence cues for depth and distance estimation reduces discomfort. It was also found that occlusion of peripheral vision on HMDs is a contributor to visual discomfort~\cite{moss11}: not being able to view content external to the HMD screen exacerbates the sensory conflict between the vestibular and ocular systems. Following this, it was proposed that future HMDs do not entirely cover the visual field in order to reduce visual discomfort.\\
+
+Other attempts to explicitly solve the accommodation-vergence conflict in stereoscopic displays have also used hardware based approaches involving set-ups such as multi-focal displays~\cite{akeley04, love09}, alternative lens systems~\cite{liu10}, or multi-lens systems~\cite{rolland05:2, lanman13}. These architectures all provide close-to-correct accommodation cues for multiple depths but their complex construction prohibits easy application to consumer level devices such as the Oculus at this time.\\
+
+%During our survey, we could not find studys into solving the accommodation-vergence conflict using purely software factors on stereoscopic HMDs.\\
+
+\noindent \textbf{Visual perception of DoF blur: }
+Blurring effects are known to serve as a cue for perception of object size~\cite{held10}, and in conjunction with cues such as binocular disparity (featured in all stereoscopic implementations) also serve to alter perception of quantitative depth~\cite{mather96}. Adding blur gradients to simulate DoF and peripheral blur improves quality and realism of game play in a single display~\cite{hillaire08} and DoF blur can reduce rivalry from monocular regions in stereoscopic images~\cite{hoffman10}, indicating that DoF blur should decrease visual discomfort without negatively impacting the quality of the virtual environment.  \\
+
+\textbf{Perceptual study of DoF to reduce accommodation-vergence mismatch: }
+Focal cues including artificial blur and accommodation directly contribute to the quality of a 3D experience through the reduction of visual fatigue~\cite{shiwa96}. Furthermore, correcting these cues is one of the most important factors for viewing comfort~\cite{kooi04}. Correct focusing when viewing content on a stereoscopic display reduces visual fatigue and discomfort by lessening the strain caused by the accommodation-vergence conflict~\cite{hoffman08}. %Recent perceptual studies~\cite{duchowski14} show that visual discomfort can be reduced in stereoscopic displays through the use of DoF blur techniques that simulate the accommodative effect. % this has already been written, in the introduction.
+During our survey, we could not find prior perceptual studies to report the impact of using DoF blur to reduce accommodation-vergence conflict in the specific case of stereoscopic HMDs.\\
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OLD
+%HMDs provide immersive visualization ideal for VR.  The type of the HMDs are often classified according to the optic and screen configurations, and well surveyed in \cite{Rolland_thepast, rolland05}. The screen on HMDs can be either stereoscopic (create the illusion of depth by sending images rendered from different angles to each eye), monoscopic (send the same image to each eye) or biopic (both eyes view the same display). The Oculus that we used in this paper is a stereoscopic HMD\cite{OculusDK1}.\\
+
+%\noindent \textbf{Simulator Sickness:}
+% this needs to link to HMDs
+%Simulator sickness is referred to as the incidence of sickness symptoms associated with motion sickness, arising in the specific case where the user is interfacing with a visual display \cite{johnson}. The first occurrence of simulator sickness was reported on the first helicopter fight simulator, back in 1956 \cite{miller}. \cite{virtual:expect} indicates that as many as 80\% of people experience these adverse effects when using HMDs. The symptoms associated with simulator sickness on HMDs are broadly classified into three groups \cite{kennedy93}: 1) oculomotor symptoms such as eyestrain, blurry vision and headaches; 2) disorientation symptoms such as dizziness and vertigo and nausea symptoms; 3) changes in salivation and stomach awareness \cite{howard:depthPerception}. Some symptoms may contribute towards overall discomfort in more than one group: For example, blurry vision can be considered to contribute to both oculomotor and disorientation discomfort. We refer to \textbf{\textit{"Visual Discomfort"}} as the specific case of simulator sickness on HMDs related to human visual system.\\
+
+%\noindent \textbf{Reason of Visual Discomfort: }
+%Previous studies in \cite{mil:lit, mil:simsick}  have investigated factors that lead to the visual discomfort in HMDs.  The discomfort tends to be caused by either  the user to undergo motions that are abnormal when compared to experiences in reality (e.g. vection \cite{vection}), or through the presented scene on the display not behaving in a manner that accurately simulates the expected human visual system. 
+
+%Shibata et al. \cite{shibata:zone} showed that the conflict between vergence and accommodation depth cues in stereoscopic displays cause visual discomfort. It is known that in typical viewing conditions, the vergence and accommodation effects in the human eye are tightly coupled. As like HMDs when the accommodative demand is fixed, a greater rate of change of the vergence demand results in a higher visual discomfort \cite{v:a}.\\
+
+%\noindent \textbf{Reducing the visual discomfort: }
+
+%\cite{stereovsmono} found that the viewing of monoscopic or micro-stereoscopic content on a HMD was less sickening, compared to viewing the same, stereoscopic content. This indicates that the removal of the accommodation-vergence conflict does increase viewer comfort. \cite{hmd:sick} concludes that the occlusion of peripheral vision on HMDs is a contributor of the visual discomfort, given that this occlusion prevents the viewing of sources external to the display in the HMD, furthering the sensory conflict between the vestibular and ocular systems, and thus recommend changing of the structure of HMDs to not entirely cover the visual field. The previous attempt to solve the accommodation-vergence mismatch do so through hardware based approaches. These hardware solutions tend to involve either multi-focal displays \cite{Akeley:2004:SDP:1015706.1015804, Love:09}, alternative lens systems \cite{liu2010novel}, or multi-lens systems \cite{hmds, Lanman:2013}. These architectures all provide close-to-correct accommodation cues for multiple depths but their complex construction prohibits easy application to consumer level devices such as the Oculus.\\
+
+
+% \textbf{Perceptual Study of DOF to reduce Convergence and Accommodation Mismatch: }
+%\cite{3ddac} reveals that focal cues including artificial blur and accommodation directly contribute to the quality of a 3D experience through the reduction of visual fatigue. Furthermore, \cite{visual:comfort} indicates that not only does it contribute, it was one of the most important factors for viewing comfort. \cite{virtual:expect2} showed that correct focusing in a scene on a stereoscopic display reduces visual fatigue and discomfort by lessening the strain caused by the vergence-accommodation conflict. Recently, \cite{duch:reduceVisual} reported perceptual study results to show that visual discomfort can be reduced in stereoscopic displays through the use of DOF blur techniques that simulate the accommodative effect. \\
+
+% \textbf{Hardware solutions for accomodation - vergence conflict: }
+% Many implementations that attempt to solve the Accomodation / Vergence mismatch do so through hardare based approaches. These hardware solutions tend to involve either multifocal displays \cite{Akeley:2004:SDP:1015706.1015804, Love:09}, multilens displays \cite{hmds, Lanman:2013} or alternative len systems \cite{liu2010novel}. These architectures all provde close-to-correct accomodation cues for miltuple depths but their complex construction prohibits easy application to devices such as the Oculus.  \\
+%During our survey, we could not find studys into solving the accommodation-vergence conflict using purely software factors on stereoscopic HMDs. \\
+
+% \textbf{Software solutions for accomodation - vergence conflict: }
+% \cite{stereovsmono} found that the viewing of monoscopic or microstereoscopic content on a HMD was less sickening, compared to viewing the same, stereoscopic content. This indicates that the removal of the accomodation-vergence conflict does increase viewer comfort. 
+
+%\noindent \textbf{Visual Perception of DOF Blur: }
+%Blurring effects are known to serve as a cue for perception of object size\cite{Held:2010:UBA:1731047.1731057}, and in conjunction with cues such as binocular disparity (featured in all stereoscopic implementations) also serves to alter perception of quantitative depth \cite{pictorial}.  \cite{hillaire2008using} showed that adding blur gradients to simulate DOF and peripheral blur improves quality and realism of game players in a single display. \cite{hoffman10} reported that DOF blur can reduce rivalry from monocular regions in stereoscopic images.  
+
+% \textbf{Perceptual Study of DOF to reduce Convergence and Accommodation Mismatch: }
+%\cite{3ddac} reveals that focal cues including artificial blur and accommodation directly contribute to the quality of a 3D experience through the reduction of visual fatigue. Furthermore, \cite{visual:comfort} indicates that not only does it contribute, it was one of the most important factors for viewing comfort. \cite{virtual:expect2} showed that correct focusing in a scene on a stereoscopic display reduces visual fatigue and discomfort by lessening the strain caused by the vergence-accommodation conflict. Recently, \cite{duch:reduceVisual} reported perceptual study results to show that visual discomfort can be reduced in stereoscopic displays through the use of DOF blur techniques that simulate the accommodative effect. \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OLDEST
+% Head Mounted displays can be classified according to the optic system used to display information. They may involve displays that are see-through, like the google-glass or immersive (blocking the direct real world). Immersive HMDs can consist of a large variety of optic and screen configurations including multidisplay HMDs with more than one screen, or multifocal displays with more than one focal plane. Images on HMDs can be either stereoscopic (create the illusion od depth by sending images rendered from different angles to each eye), monoscopic (send the same image to each eye) or biopic (both eyes view the same display). The Oculus that we test on is an example of a stereoscopic, immersive dislay\cite{Rolland_thepast}{\color{blue}[TODO: need the second citation for this]}.\\
+
+%Visual discomfort can be caused by many factors. In HMDs, discomfort tends to be caused by either  the user to undergo motions that are abnormal when compared to experiences in reality, or through the presented scene on the HMD not behaving in a manner that accurately simulates the expected motion environment \cite{mil:lit, mil:simsick}.  \\
+
+% It is common in media such as games or films to have the camera perform motions that a humans visual system could not, such as rapidly changing vertical posotion without warning, or following flight paths. These motions, for the majority of users, are not problematic when presented in non-immersive viewing sitations. However, Immersive visual environments are known to induce vection, the powerful illusory sensation of self-motion \cite{vection}. When this vection does not match the actual motion of the human body, a conflict between the vestibular and ocular systems occurs, leading to discomfort\cite{reason:motion}\\
+
+
+
+%Survey of Visual Discomfort in HMD
+% 2.1.          Visual discomfort and simulator sickness symptom
+% 2.2.          Reason of the visual discomfort
+%Study to reduce Convergence and Accommodation Mismatch in HMD
+% 3.1.          Hardware solutions (refer Lanman NVIDA paper ,their survey in section 2.3.)
+% May be good to not eht paper about fixing skyboxes somewhere, since they work off a similar point
+% 3.2.          Software solutions (?)
+%4. Perceptual Study of Depth of Field and Blur
+% 4.1.       Perceptual study in Depth of Field (or Blur) in Single Display
+% 4.2.      Perceptual study in Depth of Field (or Blur) in Stereo Display
+% o   Depth-of-Field Blur Effects for First-Person Navigation in Virtual Environments, VRST 2007 + others?
+% 4.3.      Perceptual Study of Depth of Field (or Blur) to reduce Convergence and Accommodation Mismatch
+% o   SAP2014 paper + others?                
+% down here, look more at citing specific papers
+
+
+% Some useful info in this paper. Look through it: \cite{ip}
+
+% 4.4.       Perceptual study in Depth of Field (or Blur) using HMD
+% o   If any (I believe so), list here
+% not sure if there is anything 
+% 4.5.     Perceptual Study of Depth of Field (or Blur) reduce Convergence and Accommodation Mismatch in HMD
+% o   If any, list here
+% o   If nothing, clearly mention that this paper is the first to perform perceptual study of reducing visual discomfort in HMD using depth of field
+
+% This had to be moved here to get it to render on page 3
+
+

@@ -1,0 +1,49 @@
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+\usepackage[pdftex]{graphicx}
+%\usepackage[sorting=none]{biblatex}
+%\bibliography{references}
+\usepackage{color}
+\usepackage{dirtytalk}
+%\usepackage{hyperref}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+% thrhee
+\title{Perceptual Evaluation of Dynamic Depth of Field \\ to Reduce Visual Discomfort in HMD}
+% \title{Perceptual Evaluation of Visual Discomfort \\ using Dynamic Depth of Field in \\Head Mounted Displays}
+
+\author{Kieran Carnegie and Taehyun Rhee
+% thrhee: Kieran is the first author, Taehyun is the corresponding author
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Taehyun Rhee is with the School of Engineering and Computer Science, Victoria University of Wellington, New Zealand \protect \\ E-mail: taehyun.rhee@ecs.vuw.ac.nz } }
+%\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem K. Carnegie is with the Department of Engineering and Computer Science, Victoria University of Wellington, New Zealand \protect \\ E-mail: kotarou@ecs.vuw.ac.nz } }
+
+\IEEEtitleabstractindextext{%
+\begin{abstract}
+\input{01_abstract.tex}
+\end{abstract}
+
+\begin{IEEEkeywords}
+% thrhee
+Visual discomfort, Perception, Depth of Field, Head Mounted Display
+% Simulator Sickness, Head Mounted Display, Depth of Field, Stereoscopic Display, Viewing Comfort
+\end{IEEEkeywords}}
+
+\maketitle
+\IEEEdisplaynontitleabstractindextext
+\IEEEpeerreviewmaketitle
+
+\input{02_introduction.tex}
+\input{03_relatedwork.tex}
+\input{04_setup.tex}
+\input{05_stimuli.tex}
+\input{06_procedure.tex}
+\input{07_result.tex}
+\input{08_conclusion.tex}
+%\input{09_note.tex}
+
+\bibliographystyle{ieeetr}
+\bibliography{references}
+%\printbibliography
+
+\end{document}

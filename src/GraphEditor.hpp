@@ -33,14 +33,13 @@ namespace skadi {
 					// Move the brush
 					//
 					initial3d::vec3f oldPos = brush_position;
-					initial3d::vec3f newPos = initial3d::vec3f(e.pos.x, e.pos.y, 0);
-					brush_position = newPos;
+					brush_position = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 
 					// Calculate relative to map
 					//
 					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-					initial3d::vec3f movement = brushRelativePosition(newPos - oldPos);
-					float relativeRadius = brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius).mag();
+					initial3d::vec3f movement = relativePos - brushRelativePosition(oldPos);
+					float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
 
 					brush->step(relativePos, relativeRadius, movement, graph);
 				}
@@ -55,10 +54,7 @@ namespace skadi {
 					//Calculate What nodes are in area
 					//
 					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-					float relativeRadius = brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius).mag();
-
-					std::cout << "DEBUG :: " << brush_position << " :: " <<  ~initial3d::vec3f(1, 1, 0) * brush_radius << std::endl;
-					std::cout << "DEBUG :: " << brushRelativePosition(brush_position) << " :: " << brushRelativePosition(~initial3d::vec3f(1, 1, 0) * brush_radius) << std::endl;
+					float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
 
 					if (e.button == GLFW_MOUSE_BUTTON_1) {
 						brush->activate(relativePos, relativeRadius, graph, false);
@@ -433,9 +429,24 @@ namespace skadi {
 	private:
 		
 		initial3d::vec3f brushRelativePosition(initial3d::vec3f mousePosition) {
+
+			using namespace std;
+			using namespace initial3d;
+
 			int w = window->size().w;
 			int h = window->size().h;
 			initial3d::mat4f mat = (!initial3d::mat4f::scale(size, size, 1)) * (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
+
+			// vec3f onscreenPos = mousePosition;
+			// vec3f displayPos = get_brush_proj_mat(w, h) * onscreenPos;
+			// vec3f nodePos = (!get_graph_proj_mat(w, h)) * displayPos;
+			// vec3f scalePos = (!initial3d::mat4f::scale(size, size, 1)) * nodePos;
+
+			// cout << "onscreenPos :: " << onscreenPos << endl;
+			// cout << "displayPos :: " << displayPos << endl;
+			// cout << "nodePos :: " << nodePos << endl;
+			// cout << "scalePos :: " << scalePos << endl << " " << endl;
+
 			return mat * mousePosition;
 		};
 
