@@ -20,7 +20,20 @@ namespace skadi {
 
 	class Heightmap {
 	public:
+		// width and height are number of EDGES, not VERTICES
 		Heightmap(int width, int height) : m_width(width), m_height(height) {
+			glGenVertexArrays(1, &vao);
+			glGenBuffers(1, &ibo);
+			glGenBuffers(1, &vbo_pos);
+			glGenBuffers(1, &vbo_uv);
+			genMesh(width, height);
+		}
+
+		// width and height are number of EDGES, not VERTICES
+		void genMesh(int width, int height) {
+
+			m_width = width;
+			m_height = height;
 
 			for (int y = 0; y <= height; y++) {
 				for (int x = 0; x <= width; x++) {
@@ -60,37 +73,32 @@ namespace skadi {
 			}
 
 
-			glGenVertexArrays(1, &vao);
 			glBindVertexArray(vao);
-			glGenBuffers(1, &ibo);
-			glGenBuffers(1, &vbo_pos);
-			glGenBuffers(1, &vbo_uv);
 
 			// upload indices
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); // this sticks to the vao
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, idx.size() * sizeof(GLuint), &idx[0], GL_STATIC_DRAW);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, idx.size() * sizeof(GLuint), &idx[0], GL_DYNAMIC_DRAW);
 
 			// upload positions
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-			glBufferData(GL_ARRAY_BUFFER, pos.size() * sizeof(float), &pos[0], GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, pos.size() * sizeof(float), &pos[0], GL_DYNAMIC_DRAW);
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 			// upload texture coord
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_uv);
-			glBufferData(GL_ARRAY_BUFFER, uv.size() * sizeof(float), &uv[0], GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, uv.size() * sizeof(float), &uv[0], GL_DYNAMIC_DRAW);
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 			// cleanup
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-
 		}
 
 		void updateNormals() {
 
-			if (!tex_height) throw 3456;
+			assert(tex_height);
 
 			if (!fbo) glGenFramebuffers(1, &fbo);
 			

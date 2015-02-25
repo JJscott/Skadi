@@ -65,6 +65,7 @@ namespace skadi {
 
 	class Camera {
 	public:
+		// world -> view
 		virtual initial3d::mat4d getViewTransform() = 0;
 		virtual void update() = 0;
 	private:
@@ -81,7 +82,7 @@ namespace skadi {
 
 		initial3d::mat4d getViewTransform() {
 			initial3d::quatd rot = (m_ori * initial3d::quatd::axisangle(initial3d::vec3d::i(), m_rot_v));
-			return initial3d::mat4d::translate(m_pos) * initial3d::mat4d::rotate(rot); //TODO check / recently switched this
+			return initial3d::mat4d::rotate(!rot) * initial3d::mat4d::translate(-m_pos); //TODO check / recently switched this
 		}
 
 		void update() {
@@ -125,7 +126,7 @@ namespace skadi {
 			if (m_window->getKey(GLFW_KEY_SPACE)) move += up;
 
 			//TODO change this
-			if (m_window->pollKey(GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS) {
+			if (m_window->pollKey(GLFW_KEY_GRAVE_ACCENT)) {
 				m_mouse_captured = !m_mouse_captured;
 				glfwSetCursorPos(m_window->handle(), m_window->width() * 0.5, m_window->height() * 0.5);
 			}
@@ -155,10 +156,11 @@ namespace skadi {
 	//Side on camera
 	class EditorCamera : public Camera {
 	public:
-		EditorCamera(gecom::Window *win, const initial3d::vec3d &pos) : m_window(win), position(pos), scale(1.0) {}
+		EditorCamera(gecom::Window *win, const initial3d::vec3d &pos, float zoom_ = 1.0) :
+			m_window(win), position(pos), zoom(zoom_) { }
 
 		initial3d::mat4d getViewTransform() {
-			return initial3d::mat4d::scale(scale, scale, 0) * initial3d::mat4d::translate(position);
+			return initial3d::mat4d::scale(zoom, zoom, 1) * initial3d::mat4d::translate(-position);
 		}
 
 		void update() {
@@ -166,8 +168,7 @@ namespace skadi {
 			using namespace initial3d;
 			using namespace std;
 
-			const float scaleSpeed = 1.0005;
-			const float moveSpeed = 500.0;
+			float moveSpeed = 0.5f * min(m_window->width(), m_window->height());
 
 
 			// time since last update
@@ -178,15 +179,21 @@ namespace skadi {
 
 			vec3d move = vec3d::zero();
 
-			if (m_window->getKey(GLFW_KEY_W)) move -= vec3d::j();
-			if (m_window->getKey(GLFW_KEY_S)) move += vec3d::j();
-			if (m_window->getKey(GLFW_KEY_A)) move += vec3d::i();
-			if (m_window->getKey(GLFW_KEY_D)) move -= vec3d::i();
-			if (m_window->getKey(GLFW_KEY_LEFT_SHIFT)) scale /= scaleSpeed;
-			if (m_window->getKey(GLFW_KEY_SPACE)) scale *= scaleSpeed;
+			if (m_window->getKey(GLFW_KEY_W)) move += vec3d::j();
+			if (m_window->getKey(GLFW_KEY_S)) move -= vec3d::j();
+			if (m_window->getKey(GLFW_KEY_A)) move -= vec3d::i();
+			if (m_window->getKey(GLFW_KEY_D)) move += vec3d::i();
+			
+			if (m_window->pollKey(GLFW_KEY_Q)) {
+				zoom /= 1.2;
+			}
+
+			if (m_window->pollKey(GLFW_KEY_E)) {
+				zoom *= 1.2;
+			}
 
 			try {
-				vec3d dpos = ~move * (moveSpeed/scale) * dt;
+				vec3d dpos = ~move * (moveSpeed / zoom) * dt;
 				position = position + dpos;
 
 				//cout << position << " :: move = " << move << endl;
@@ -198,7 +205,7 @@ namespace skadi {
 	private:
 		gecom::Window * m_window;
 		initial3d::vec3d position;
-		float scale;
+		float zoom;
 		std::chrono::steady_clock::time_point m_time_last;
 	};
 }

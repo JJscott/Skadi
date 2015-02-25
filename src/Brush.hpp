@@ -80,7 +80,7 @@ namespace skadi {
 		}
 
 		virtual void onActivate(const initial3d::vec3f &position, float radius, Graph *g) {
-			float e = 0, n = 0;
+			float e = 0, n = 1;
 			for (Graph::Node *node : getNodesInBrush(position, radius, g)) {
 				e += node->elevation;
 				n++;
@@ -93,8 +93,9 @@ namespace skadi {
 		virtual void onDeactivate(const initial3d::vec3f &position, float radius, Graph *g) {
 			std::cout << position << std::endl;
 			Graph::Node *n = nullptr;
-			float distance = 10; //randomly high
+			float distance = radius; // NOT RANDOM
 			for (Graph::Node *node : g->getNodes()) {
+				if (node == temp_node) continue;
 				float newDis = (node->position - position).mag();
 				if (newDis < distance) {
 					n = node;
@@ -103,14 +104,14 @@ namespace skadi {
 			}
 			if (n != nullptr) {
 				g->addEdge(temp_node, n);
+				temp_node->fixed = false;
 			}
-			temp_node->fixed = false;
 			temp_node = nullptr;
 		}
 
 	private:
 		NodeBrush() {}
-		Graph::Node *temp_node = nullptr;;
+		Graph::Node *temp_node = nullptr;
 	};
 
 
@@ -123,13 +124,13 @@ namespace skadi {
 		}
 
 		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) {
-			for (Graph::Node * n : g->getNodes()) {
-				n->selected = !isAlt();
+			for (Graph::Node * n : getNodesInBrush(position, radius, g)) {
+				g->select(n, !isAlt());
 			}
 		};
 
 	private:
 		SelectBrush() {}
-		Graph::Node *temp_node = nullptr;;
+		
 	};
 }

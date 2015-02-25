@@ -71,8 +71,9 @@ void display(int w, int h) {
 	camera->update();
 
 	mat4d proj_matrix = projection->getProjectionTransform();
-	mat4d view_matrix = !camera->getViewTransform();
+	mat4d view_matrix = camera->getViewTransform();
 
+	glClearColor(1.f, 1.f, 1.f, 1.f);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -90,6 +91,8 @@ void displayEditor(int w, int h) {
 
 	Graph *g = graphEditor->getGraph();
 	g->doLayout(10, g->getNodes());
+
+	glClearColor(1.f, 1.f, 1.f, 1.f);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -122,14 +125,14 @@ int main() {
 	// nvidia uses this as mipmap allocation hint; not doing it causes warning spam
 	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-	win = gecom::createWindow().size(1024, 768).title("Skadi").visible(true);
+	win = gecom::createWindow().size(1024, 768).hint(GLFW_SAMPLES, 16).title("Skadi").visible(true);
 	win->makeContextCurrent();
 
 	bool editor_enabled = true;
 
 	win->onKeyPress.subscribe([&](const gecom::key_event &e) {
 		if (e.key == GLFW_KEY_TAB) {
-			// TODO switch UIs
+			// switch UIs by hackyness
 			graphEditor->enableEventDispatch(!editor_enabled);
 			editor_enabled = !editor_enabled;
 		}
@@ -153,8 +156,11 @@ int main() {
 
 		// render!
 		if (size.w != 0 && size.h != 0) {
-			//display(size.w, size.h);
-			displayEditor(size.w, size.h);
+			if (editor_enabled) {
+				displayEditor(size.w, size.h);
+			} else {
+				display(size.w, size.h);
+			}
 		}
 
 

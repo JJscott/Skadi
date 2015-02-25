@@ -76,6 +76,14 @@ namespace skadi {
 
 		Graph() {}
 
+		void select(Node *n, bool selected) {
+			n->selected = selected;
+			if (selected) {
+				selected_nodes.insert(n);
+			} else {
+				selected_nodes.erase(n);
+			}
+		}
 
 		//creates an edges for the given nodes if they are recorded in this graph
 		//Returns true if edge creation was successful
@@ -131,6 +139,10 @@ namespace skadi {
 			return edges;
 		}
 
+		const std::unordered_set<Node *> & getSelectedNodes() const {
+			return selected_nodes;
+		}
+
 		// attempt some number of layout steps.
 		// stops when average speed drops below threshold.
 		// returns number of steps actually taken.
@@ -139,6 +151,8 @@ namespace skadi {
 	private:
 		std::vector<Node *> nodes;
 		std::vector<Edge *> edges;
+
+		std::unordered_set<Node *> selected_nodes;
 
 		// for layout
 		float timestep = 0.0001;

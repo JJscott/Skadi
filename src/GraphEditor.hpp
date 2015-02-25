@@ -8,6 +8,7 @@
 #include "GL.hpp"
 #include "Initial3D.hpp"
 #include "SimpleShader.hpp"
+#include "GL.hpp"
 
 
 namespace skadi {
@@ -17,7 +18,7 @@ namespace skadi {
 
 		GraphEditor(gecom::Window *win, int s) {
 			graph = new Graph();
-			camera = new EditorCamera(win, initial3d::vec3d());
+			camera = new EditorCamera(win, initial3d::vec3d(0.5, 0.5, 0.0), win->size().h * 0.9);
 			window = win;
 
 			// subscribe to events through this proxy
@@ -39,17 +40,15 @@ namespace skadi {
 			weproxy->onMouseMove.subscribe([&](const gecom::mouse_event &e) {
 				if (brush->isActive()) {
 					// Move the brush
-					//
 					initial3d::vec3f oldPos = brush_position;
 					brush_position = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 
 					// Calculate relative to map
-					//
-					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-					initial3d::vec3f movement = relativePos - brushRelativePosition(oldPos);
-					float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
+					initial3d::vec3f brush_pos_g = windowToGraph(brush_position);
+					initial3d::vec3f brush_mov_g = brush_pos_g - windowToGraph(oldPos);
+					float brush_rad_g = (brush_pos_g - windowToGraph(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
 
-					brush->step(relativePos, relativeRadius, movement, graph);
+					brush->step(brush_pos_g, brush_rad_g, brush_mov_g, graph);
 				}
 				brush_position = initial3d::vec3f(e.pos.x, e.pos.y, 0);
 				return false; // Nessesary
@@ -59,32 +58,30 @@ namespace skadi {
 			//
 			weproxy->onMouseButtonPress.subscribe([&](const gecom::mouse_button_event &e) {
 				if (!brush->isActive()) {
-					//Calculate What nodes are in area
-					//
-					initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-					float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
+					// Calculate What nodes are in area
+					initial3d::vec3f brush_pos_g = windowToGraph(brush_position);
+					float brush_rad_g = (brush_pos_g - windowToGraph(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
 
 					if (e.button == GLFW_MOUSE_BUTTON_1) {
-						brush->activate(relativePos, relativeRadius, graph, false);
+						brush->activate(brush_pos_g, brush_rad_g, graph, false);
 					}else if (e.button == GLFW_MOUSE_BUTTON_2) {
-						brush->activate(relativePos, relativeRadius, graph, true);
+						brush->activate(brush_pos_g, brush_rad_g, graph, true);
 					}
 				}
 				return false; // Nessesary
 			}).forever();
 
 			weproxy->onMouseButtonRelease.subscribe([&](const gecom::mouse_button_event &e) {
-				//Calculate What nodes are in area
-				//
-				initial3d::vec3f relativePos = brushRelativePosition(brush_position);
-				float relativeRadius = (relativePos - brushRelativePosition(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
+				// Calculate What nodes are in area
+				initial3d::vec3f brush_pos_g = windowToGraph(brush_position);
+				float brush_rad_g = (brush_pos_g - windowToGraph(brush_position + ~initial3d::vec3f(1, 1, 0) * brush_radius)).mag();
 
 				if (brush->isActive()) {
 					if (e.button == GLFW_MOUSE_BUTTON_1 && !brush->isAlt()) {
-						brush->deactivate(relativePos, relativeRadius, graph);
+						brush->deactivate(brush_pos_g, brush_rad_g, graph);
 					}
 					else if (e.button == GLFW_MOUSE_BUTTON_2 && brush->isAlt()) {
-						brush->deactivate(relativePos, relativeRadius, graph);
+						brush->deactivate(brush_pos_g, brush_rad_g, graph);
 					}
 				}
 				return false; // Nessesary
@@ -93,12 +90,14 @@ namespace skadi {
 			// Listen for key presses
 			//
 			weproxy->onKeyPress.subscribe([&](const gecom::key_event &e) {
-				if (e.key == GLFW_KEY_LEFT_BRACKET) {
-					brush_radius = brush_radius - 1;
-				}
-				else if (e.key == GLFW_KEY_RIGHT_BRACKET) {
-					brush_radius = brush_radius + 1;
-				}
+				if (e.key == GLFW_KEY_1) brush = SelectBrush::inst();
+
+				return false;
+			}).forever();
+
+			// scroll for brush radius
+			weproxy->onMouseScroll.subscribe([&](const gecom::mouse_scroll_event &e) {
+				brush_radius += e.offset.h;
 				return false;
 			}).forever();
 
@@ -138,14 +137,19 @@ namespace skadi {
 
 			#ifdef _VERTEX_
 
-			layout(location = 0) in vec2 pos_m;
+			layout(location = 0) in vec4 pos_m;
 
 			out VertexData {
 				vec3 pos_m;
+				flat bool selected;
+				flat bool fixed;
 			} vertex_out;
 
 			void main() {
 				vertex_out.pos_m = vec3(pos_m.x, pos_m.y, 0.9);
+				uint flags = floatBitsToUint(pos_m.w);
+				vertex_out.selected = bool(flags & 0x1u);
+				vertex_out.fixed = bool(flags & 0x2u);
 			}
 
 			#endif
@@ -153,20 +157,27 @@ namespace skadi {
 			#ifdef _GEOMETRY_
 
 			layout(points) in;
-			layout(triangle_strip, max_vertices = 4) out;
+			layout(triangle_strip, max_vertices = 8) out;
 
 			in VertexData {
 				vec3 pos_m;
+				flat bool selected;
+				flat bool fixed;
 			} vertex_in[];
 
 			out VertexData {
 				vec3 pos_v;
+				flat bool selected;
+				flat bool fixed;
 			} vertex_out;
-
+			
 			void main() {
 
 				vec3 pos_v = (modelViewMatrix * vec4(vertex_in[0].pos_m, 1.0)).xyz;
 				//vec3 pos_v = (vec4(vertex_in[0].pos_m, 1.0)).xyz;
+
+				vertex_out.selected = vertex_in[0].selected;
+				vertex_out.fixed = vertex_in[0].fixed;
 
 				vertex_out.pos_v = pos_v + vec3(-2, -2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
@@ -193,12 +204,20 @@ namespace skadi {
 
 			in VertexData {
 				vec3 pos_v;
+				flat bool selected;
+				flat bool fixed;
 			} vertex_in;
 
 			out vec4 frag_color;
 
 			void main() {
-				frag_color = vec4(1.0, 0.0, 0.0, 1.0); 
+				if (vertex_in.selected) {
+					frag_color = vec4(0.1, 0.8, 0.1, 1.0);
+				} else if (vertex_in.fixed) {
+					frag_color = vec4(0.0, 0.0, 0.0, 1.0);
+				} else {
+					frag_color = vec4(vec3(0.5), 1.0);
+				}
 			}
 
 			#endif
@@ -210,19 +229,19 @@ namespace skadi {
 
 			uniform mat4 modelViewMatrix;
 			uniform mat4 projectionMatrix;
+			uniform float elevationMax;
 
 			#ifdef _VERTEX_
 
-			layout(location = 0) in vec2 pos_m;
+			layout(location = 0) in vec4 pos_m;
 
 			out VertexData {
-				vec3 pos_m;
+				float elevation;
 			} vertex_out;
 
 			void main() {
-				vertex_out.pos_m = (projectionMatrix * modelViewMatrix * vec4(pos_m.x, pos_m.y, 1.0, 1.0)).xyz;
-				//vertex_out.pos_m = (projectionMatrix * vec4(pos_m.x, pos_m.y, 1.0, 1.0)).xyz;
-				gl_Position = vec4(vertex_out.pos_m, 1);
+				vertex_out.elevation = pos_m.z;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(pos_m.x, pos_m.y, 0.95, 1.0);
 			}
 
 			#endif
@@ -230,13 +249,14 @@ namespace skadi {
 			#ifdef _FRAGMENT_
 
 			in VertexData {
-				vec3 pos_v;
+				float elevation;
 			} vertex_in;
 
 			out vec4 frag_color;
 
 			void main() {
-				frag_color = vec4(0.0, 1.0, 0.0, 1.0); 
+				float f = vertex_in.elevation / elevationMax;
+				frag_color = vec4(f, 0.0, 1.0 - f, 1.0);
 			}
 
 			#endif
@@ -301,6 +321,7 @@ namespace skadi {
 		void draw() {
 			draw_graph();
 			draw_brush();
+			draw_box();
 
 			// Finish
 			//
@@ -309,7 +330,7 @@ namespace skadi {
 		}
 
 		initial3d::mat4f get_graph_proj_mat(float w, float h) {
-			return initial3d::mat4f::translate(initial3d::vec3f(-1, -1, 0)) * initial3d::mat4f::scale(1 / float(w / 2), 1 / float(h / 2), 1);
+			return initial3d::mat4f::scale(2.f / w, 2.f / h, 1);
 
 		}
 
@@ -327,11 +348,20 @@ namespace skadi {
 			vector<GLuint> edgeIdx;
 			unordered_map<Graph::Node *, GLuint> nodeToIdx;
 
+			float elevation_max = 0.f;
+
 			for (Graph::Node *node : graph->getNodes()) {
-				nodeToIdx[node] = nodePos.size() / 2;
+				nodeToIdx[node] = nodePos.size() / 4;
 				vec3f pos = node->position;
-				nodePos.push_back(size * pos.x());
-				nodePos.push_back(size * pos.y());
+				nodePos.push_back(pos.x());
+				nodePos.push_back(pos.y());
+				nodePos.push_back(node->elevation);
+				elevation_max = max(elevation_max, node->elevation);
+				// bithacks - flags as bits in a float
+				GLuint flags = 0;
+				flags |= GLuint(node->selected) << 0;
+				flags |= GLuint(node->fixed) << 1;
+				nodePos.push_back(reinterpret_cast<float &>(flags));
 			}
 
 			for (Graph::Edge *edge : graph->getEdges()) {
@@ -348,7 +378,7 @@ namespace skadi {
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
 			glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_DYNAMIC_DRAW);
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 			// Bind node VAO for Nodes
 			//
@@ -363,14 +393,12 @@ namespace skadi {
 			//
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 
 			// Construct View and Projection Matricies
 			//
 			mat4f proj_mat = get_graph_proj_mat(w, h);
-
-			//mat4f view_mat(1);
 			mat4f view_mat = camera->getViewTransform();
 
 
@@ -381,12 +409,13 @@ namespace skadi {
 			glUniformMatrix4fv(glGetUniformLocation(shdr_node, "projectionMatrix"), 1, true, proj_mat);
 
 			glBindVertexArray(vao_node);
-			glDrawArrays(GL_POINTS, 0, nodePos.size() / 2);
+			glDrawArrays(GL_POINTS, 0, nodePos.size() / 4);
 
 
 			glUseProgram(shdr_edge);
-			glUniformMatrix4fv(glGetUniformLocation(shdr_node, "modelViewMatrix"), 1, true, view_mat);
+			glUniformMatrix4fv(glGetUniformLocation(shdr_edge, "modelViewMatrix"), 1, true, view_mat);
 			glUniformMatrix4fv(glGetUniformLocation(shdr_edge, "projectionMatrix"), 1, true, proj_mat);
+			glUniform1f(glGetUniformLocation(shdr_edge, "elevationMax"), elevation_max);
 
 			glBindVertexArray(vao_edge);
 			glDrawElements(GL_LINES, edgeIdx.size(), GL_UNSIGNED_INT, nullptr);
@@ -436,6 +465,71 @@ namespace skadi {
 			glDrawArrays(GL_LINE_LOOP, 0, 1000);
 		}
 
+
+		void draw_box() {
+
+			using namespace initial3d;
+
+			float h = window->size().h;
+			float w = window->size().w;
+
+			static const char * prog_box_src = R"delim(
+			
+			uniform mat4 modelViewMatrix;
+			uniform mat4 projectionMatrix;
+
+			#ifdef _VERTEX_
+
+			void main() { }
+
+			#endif
+
+			#ifdef _GEOMETRY_
+
+			layout(points) in;
+			layout(line_strip, max_vertices = 5) out;
+
+			void main() {
+				
+				const vec2[] p = vec2[](vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0), vec2(0.0, 0.0));
+				
+				for (int i = 0; i < p.length; i++) {
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(p[i], 0.99, 1.0);
+					EmitVertex();
+				}
+				
+			}
+
+			#endif
+
+			#ifdef _FRAGMENT_
+
+			out vec4 frag_color;
+
+			void main() {
+				frag_color = vec4(vec3(0.75), 1.0); 
+			}
+
+			#endif
+
+			)delim";
+
+			static GLuint prog_box = 0;
+
+			if (prog_box == 0) {
+				prog_box = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER }, prog_box_src);
+			}
+
+			mat4f proj_mat = get_graph_proj_mat(w, h);
+			mat4f view_mat = camera->getViewTransform();
+
+			glUseProgram(prog_box);
+			glUniformMatrix4fv(glGetUniformLocation(prog_box, "modelViewMatrix"), 1, true, view_mat);
+			glUniformMatrix4fv(glGetUniformLocation(prog_box, "projectionMatrix"), 1, true, proj_mat);
+			gecom::draw_dummy();
+
+		}
+
 		Graph *getGraph() { return graph; }
 
 		bool enableEventDispatch(bool b) {
@@ -448,14 +542,15 @@ namespace skadi {
 
 	private:
 		
-		initial3d::vec3f brushRelativePosition(initial3d::vec3f mousePosition) {
+		// transform window coords to graph coords
+		initial3d::vec3f windowToGraph(initial3d::vec3f mousePosition) {
 
 			using namespace std;
 			using namespace initial3d;
 
 			int w = window->size().w;
 			int h = window->size().h;
-			initial3d::mat4f mat = (!initial3d::mat4f::scale(size, size, 1)) * (!get_graph_proj_mat(w, h)) * get_brush_proj_mat(w, h);
+			initial3d::mat4f mat = !camera->getViewTransform() * !get_graph_proj_mat(w, h) * get_brush_proj_mat(w, h);
 
 			// vec3f onscreenPos = mousePosition;
 			// vec3f displayPos = get_brush_proj_mat(w, h) * onscreenPos;
@@ -478,6 +573,7 @@ namespace skadi {
 		//
 		//
 		Camera *camera;
+
 		int size;
 
 		// Graph
@@ -494,7 +590,7 @@ namespace skadi {
 		// Brush
 		//
 		Brush *brush;
-		int brush_radius;
+		float brush_radius;
 		initial3d::vec3f brush_position;
 
 		GLuint shdr_brush;
