@@ -265,6 +265,8 @@ namespace skadi {
 		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) override {
 			for (Graph::Node * n : getNodesInBrush(position, radius, g)) {
 				for (Graph::Node *n0 : temp_nodes) {
+					// don't add reflexive edges; this breaks the heightmap conversion
+					if (n0 == n) continue;
 					if (isAlt()) {
 						Graph::Edge *e = n0->findEdge(n);
 						if (e) g->deleteEdge(e);
