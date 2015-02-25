@@ -44,6 +44,21 @@ namespace skadi {
 			}
 			return nodes;
 		}
+
+		Graph::Node * getClosestNodeInBrush(const initial3d::vec3f &position, float radius, Graph *g, Graph::Node *exclude = nullptr) {
+			Graph::Node *n = nullptr;
+			float distance = radius; // NOT RANDOM
+			for (Graph::Node *node : g->getNodes()) {
+				if (node == exclude) continue;
+				float newDis = (node->position - position).mag();
+				if (newDis < distance) {
+					n = node;
+					distance = newDis;
+				}
+			}
+			return n;
+		}
+
 	private:
 
 		bool active = false;
@@ -102,16 +117,7 @@ namespace skadi {
 
 		virtual void onDeactivate(const initial3d::vec3f &position, float radius, Graph *g) override {
 			std::cout << position << std::endl;
-			Graph::Node *n = nullptr;
-			float distance = radius; // NOT RANDOM
-			for (Graph::Node *node : g->getNodes()) {
-				if (node == temp_node) continue;
-				float newDis = (node->position - position).mag();
-				if (newDis < distance) {
-					n = node;
-					distance = newDis;
-				}
-			}
+			Graph::Node *n = getClosestNodeInBrush(position, radius, g, temp_node);
 			if (n != nullptr) {
 				g->addEdge(temp_node, n);
 				temp_node->fixed = false;
@@ -273,4 +279,42 @@ namespace skadi {
 		ConnectBrush() { }
 		std::vector<Graph::Node *> temp_nodes;
 	};
+
+	// make a line of nodes
+	class NodeLineBrush : public Brush {
+	public:
+		static NodeLineBrush * inst() {
+			static NodeLineBrush *s = new NodeLineBrush();
+			return s;
+		}
+
+		virtual const char * getName() override {
+			return "NodeLine";
+		}
+
+		virtual void onActivate(const initial3d::vec3f &position, float radius, Graph *g) override {
+			temp_node = getClosestNodeInBrush(position, radius, g);
+			if (!temp_node) {
+				temp_node = g->addNode(position, 0.f);
+				temp_node->fixed = true;
+			}
+		}
+
+		virtual void onDeactivate(const initial3d::vec3f &position, float radius, Graph *g) override {
+			temp_node = nullptr;
+		}
+
+		virtual void step(const initial3d::vec3f &position, float radius, const initial3d::vec3f &travel_distance, Graph *g) override {
+			if ((position - temp_node->position).mag() > radius) {
+				Graph::Node *old_node = temp_node;
+				temp_node = g->addNode(position, old_node->elevation);
+				g->addEdge(old_node, temp_node);
+			}
+		};
+
+	private:
+		NodeLineBrush() { }
+		Graph::Node *temp_node;
+	};
+
 }

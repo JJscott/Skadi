@@ -121,6 +121,7 @@ namespace skadi {
 
 					if (e.key == GLFW_KEY_6) brush = ConnectBrush::inst();
 					if (e.key == GLFW_KEY_7) brush = NodeBrush::inst();
+					if (e.key == GLFW_KEY_8) brush = NodeLineBrush::inst();
 
 					std::cout << "Brush: " << brush->getName() << std::endl;
 				}
@@ -428,7 +429,8 @@ namespace skadi {
 			vector<GLuint> edgeIdx;
 			unordered_map<Graph::Node *, GLuint> nodeToIdx;
 
-			float elevation_max = 0.f;
+			// prevent divide by 0
+			float elevation_max = 0.01f;
 
 			for (Graph::Node *node : graph->getNodes()) {
 				nodeToIdx[node] = nodePos.size() / 4;
@@ -672,7 +674,7 @@ namespace skadi {
 		bool doLayout(const std::unordered_set<Graph::Node *> &active_nodes) {
 			// rough complexity estimate
 			float complexity = active_nodes.size() * log(graph->getNodes().size());
-			int steps = 20000.f / complexity + 2.f;
+			int steps = 30000.f / complexity + 2.f;
 			return graph->doLayout(steps, active_nodes) < steps;
 		}
 

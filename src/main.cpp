@@ -2,17 +2,17 @@
 /*
 
 editor controls, probably:
-
-0-9: set brush
-WASD: move
-R: clear selection
-DEL: delete selection
-L: toggle layout on selection or everything
-K: toggle automatic graph subdivision and branching (not implemented yet)
+- 0-9: set brush
+- WASD: move
+- R: clear selection
+- DEL: delete selection
+- L: toggle layout on selection or everything
+- K: toggle automatic graph subdivision and branching (not implemented yet)
+- H: make heightmap
 
 global:
-TAB: switch views
-F1: toggle graph texture on mesh
+- TAB: switch views
+- F1: toggle graph texture on mesh
 
 */
 
