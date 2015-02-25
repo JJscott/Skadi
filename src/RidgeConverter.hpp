@@ -50,8 +50,10 @@ namespace skadi {
 #include "Initial3D.hpp"
 #include "Graph.hpp"
 
-#define SHARP 1
-#define BU_SHARP 1
+// i reverted these to commit 7cd00b0a cause it almost unbreaks things
+// also, why the fuck did you use defines?
+#define SHARP -0.4
+#define BU_SHARP 0.4
 
 // : note :
 //

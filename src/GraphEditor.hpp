@@ -1,3 +1,4 @@
+#pragma once
 
 #include <unordered_map>
 #include <vector>
@@ -8,18 +9,38 @@
 #include "GL.hpp"
 #include "Initial3D.hpp"
 #include "SimpleShader.hpp"
-#include "GL.hpp"
-
+#include "Log.hpp"
+#include "RidgeConverter.hpp"
 
 namespace skadi {
 
 	class GraphEditor {
 	public:
 
-		GraphEditor(gecom::Window *win, int s) {
+		GraphEditor(gecom::Window *win, Heightmap *hmap_) {
 			graph = new Graph();
 			camera = new EditorCamera(win, initial3d::vec3d(0.5, 0.5, 0.0), win->size().h * 0.9);
 			window = win;
+			hmap = hmap_;
+
+			glGenFramebuffers(1, &fbo_graph);
+			glGenTextures(1, &tex_graph);
+			
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, tex_graph);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, graph_tex_width, graph_tex_width, 0, GL_RGBA, GL_FLOAT, nullptr);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			// TODO could do mipmaps, but fuck it
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_graph);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_graph, 0);
+			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
 			// subscribe to events through this proxy
 			// allows event dispatch to this 'component' to be enabled / disabled
@@ -27,9 +48,7 @@ namespace skadi {
 			weproxy = std::make_shared<gecom::WindowEventProxy>();
 			weproxy_sub = win->subscribeEventDispatcher(weproxy);
 
-			size = s;
-
-			brush = NodeBrush::inst();
+			brush = SelectBrush::inst();
 
 			// Brush
 			//
@@ -90,7 +109,49 @@ namespace skadi {
 			// Listen for key presses
 			//
 			weproxy->onKeyPress.subscribe([&](const gecom::key_event &e) {
-				if (e.key == GLFW_KEY_1) brush = SelectBrush::inst();
+
+				if (e.key >= GLFW_KEY_0 && e.key <= GLFW_KEY_9) {
+
+					if (e.key == GLFW_KEY_1) brush = SelectBrush::inst();
+					if (e.key == GLFW_KEY_2) brush = FixBrush::inst();
+					if (e.key == GLFW_KEY_3) brush = MoveBrush::inst();
+					if (e.key == GLFW_KEY_4) brush = ElevateBrush::inst();
+
+					// TODO sharpness brush
+
+					if (e.key == GLFW_KEY_6) brush = ConnectBrush::inst();
+					if (e.key == GLFW_KEY_7) brush = NodeBrush::inst();
+
+					std::cout << "Brush: " << brush->getName() << std::endl;
+				}
+
+				// clear selection
+				if (e.key == GLFW_KEY_R) {
+					graph->clearSelection();
+				}
+
+				// delete selection
+				if (e.key == GLFW_KEY_DELETE) {
+					std::unordered_set<Graph::Node *> sel = graph->getSelectedNodes();
+					for (Graph::Node *n : sel) {
+						graph->deleteNode(n);
+					}
+				}
+
+				// make heightmap
+				if (e.key == GLFW_KEY_H) {
+					should_make_hmap = true;
+				}
+
+				// enable / disable layout
+				if (e.key == GLFW_KEY_L) {
+					should_do_layout = !should_do_layout;
+				}
+
+				// enable / disable automatic edge splitting and node branching
+				if (e.key == GLFW_KEY_K) {
+					should_expand_graph = !should_expand_graph;
+				}
 
 				return false;
 			}).forever();
@@ -101,26 +162,26 @@ namespace skadi {
 				return false;
 			}).forever();
 
-			Graph::Node *n1 = graph->addNode(initial3d::vec3f(0.4, 0.4, 0),   0.5, 0.0);
-			Graph::Node *n2 = graph->addNode(initial3d::vec3f(0.35, 0.1, 0),  0.7, 0.0);
-			Graph::Node *n3 = graph->addNode(initial3d::vec3f(0.2, 0.35, 0),  0.5, 0.0);
-			Graph::Node *n4 = graph->addNode(initial3d::vec3f(0.6, 0.42, 0),  0.7, 0.0);
-			Graph::Node *n5 = graph->addNode(initial3d::vec3f(0.86, 0.35, 0), 0.5, 0.0);
-			Graph::Node *n6 = graph->addNode(initial3d::vec3f(0.9, 0.5, 0),   0.7, 0.0);
-			Graph::Node *n7 = graph->addNode(initial3d::vec3f(0.42, 0.8, 0),  0.5, 0.0);
-			Graph::Node *n8 = graph->addNode(initial3d::vec3f(0.62, 0.9, 0),  0.7, 0.0);
-			Graph::Node *n9 = graph->addNode(initial3d::vec3f(0.76, 0.82, 0), 0.7, 0.0);
+			Graph::Node *n1 = graph->addNode(initial3d::vec3f(0.5, 0.5, 0),   0.5, 0.0);
+			//Graph::Node *n2 = graph->addNode(initial3d::vec3f(0.35, 0.1, 0),  0.7, 0.0);
+			//Graph::Node *n3 = graph->addNode(initial3d::vec3f(0.2, 0.35, 0),  0.5, 0.0);
+			//Graph::Node *n4 = graph->addNode(initial3d::vec3f(0.6, 0.42, 0),  0.7, 0.0);
+			//Graph::Node *n5 = graph->addNode(initial3d::vec3f(0.86, 0.35, 0), 0.5, 0.0);
+			//Graph::Node *n6 = graph->addNode(initial3d::vec3f(0.9, 0.5, 0),   0.7, 0.0);
+			//Graph::Node *n7 = graph->addNode(initial3d::vec3f(0.42, 0.8, 0),  0.5, 0.0);
+			//Graph::Node *n8 = graph->addNode(initial3d::vec3f(0.62, 0.9, 0),  0.7, 0.0);
+			//Graph::Node *n9 = graph->addNode(initial3d::vec3f(0.76, 0.82, 0), 0.7, 0.0);
 
 			n1->fixed = true;
 
-			graph->addEdge(n1, n2);
-			graph->addEdge(n1, n3);
-			graph->addEdge(n1, n4);
-			graph->addEdge(n4, n5);
-			graph->addEdge(n4, n6);
-			graph->addEdge(n1, n7);
-			graph->addEdge(n7, n8);
-			graph->addEdge(n8, n9);
+			//graph->addEdge(n1, n2);
+			//graph->addEdge(n1, n3);
+			//graph->addEdge(n1, n4);
+			//graph->addEdge(n4, n5);
+			//graph->addEdge(n4, n6);
+			//graph->addEdge(n1, n7);
+			//graph->addEdge(n7, n8);
+			//graph->addEdge(n8, n9);
 
 			glGenVertexArrays(1, &vao_node);
 			glGenVertexArrays(1, &vao_edge);
@@ -316,9 +377,29 @@ namespace skadi {
 
 			camera->update();
 
+			// fire artifical mouse move events to keep brushes updated
+			gecom::mouse_event mme;
+			mme.window = window;
+			mme.entered = false;
+			mme.exited = false;
+			glfwGetCursorPos(window->handle(), &mme.pos.x, &mme.pos.y);
+			weproxy->dispatchMouseEvent(mme);
+
+			if (should_do_layout) {
+				if (doLayout() && should_expand_graph) {
+					subdivideAndBranch();
+				}
+			}
+
+			if (should_make_hmap) {
+				makeHeightmap();
+				should_make_hmap = false;
+			}
+
 		}
 
 		void draw() {
+						
 			draw_graph();
 			draw_brush();
 			draw_box();
@@ -334,13 +415,12 @@ namespace skadi {
 
 		}
 
-		void draw_graph() {
+		void draw_graph(const initial3d::mat4f &view_mat, const initial3d::mat4f &proj_mat) {
 
 			using namespace std;
 			using namespace initial3d;
 
-			float h = window->size().h;
-			float w = window->size().w;
+			
 
 			// mat4d view_matrix = !camera->getViewTransform();
 
@@ -376,7 +456,11 @@ namespace skadi {
 			// Upload positions
 			//
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_node_pos);
-			glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_DYNAMIC_DRAW);
+			if (nodePos.empty()) {
+				glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+			} else {
+				glBufferData(GL_ARRAY_BUFFER, nodePos.size() * sizeof(float), &nodePos[0], GL_DYNAMIC_DRAW);
+			}
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
 
@@ -387,7 +471,11 @@ namespace skadi {
 			// Upload indices
 			//
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_edge_idx); // this sticks to the vao
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_DYNAMIC_DRAW);
+			if (edgeIdx.empty()) {
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, 1 * sizeof(GLuint), nullptr, GL_DYNAMIC_DRAW);
+			} else {
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, edgeIdx.size() * sizeof(GLuint), &edgeIdx[0], GL_DYNAMIC_DRAW);
+			}
 
 			// Upload positions
 			//
@@ -396,11 +484,7 @@ namespace skadi {
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 
-			// Construct View and Projection Matricies
-			//
-			mat4f proj_mat = get_graph_proj_mat(w, h);
-			mat4f view_mat = camera->getViewTransform();
-
+			
 
 			//Actual Draw Calls
 			//
@@ -419,6 +503,19 @@ namespace skadi {
 
 			glBindVertexArray(vao_edge);
 			glDrawElements(GL_LINES, edgeIdx.size(), GL_UNSIGNED_INT, nullptr);
+		}
+
+		void draw_graph() {
+			using namespace initial3d;
+
+			float h = window->size().h;
+			float w = window->size().w;
+
+			// Construct View and Projection Matricies
+			mat4f proj_mat = get_graph_proj_mat(w, h);
+			mat4f view_mat = camera->getViewTransform();
+
+			draw_graph(view_mat, proj_mat);
 		}
 
 		initial3d::mat4f get_brush_proj_mat(float w, float h) {
@@ -530,7 +627,70 @@ namespace skadi {
 
 		}
 
-		Graph *getGraph() { return graph; }
+		GLuint makeGraphTexture() {
+
+			using namespace initial3d;
+
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_graph);
+			glViewport(0, 0, graph_tex_width, graph_tex_width);
+
+			glClearColor(1.f, 1.f, 1.f, 1.f);
+
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			mat4f view_mat = mat4f::scale(graph_tex_width, graph_tex_width, 1) * mat4f::translate(-0.5f, -0.5f, 0);
+			mat4f proj_mat = get_graph_proj_mat(graph_tex_width, graph_tex_width);
+
+			draw_graph(view_mat, proj_mat);
+
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+			return tex_graph;
+
+		}
+
+		void makeHeightmap() {
+			// just use mesh size for texture size
+			int w = hmap->getMeshWidth();
+			int h = hmap->getMeshHeight();
+			// check for square and POT
+			assert(w == h);
+			assert((w != 0) && ((w & (w - 1)) == 0));
+			// convert edges to heightmap
+			gecom::log("Editor") << "Beginning heightmap creation...";
+			std::vector<Graph::Edge *> edges(graph->getEdges().begin(), graph->getEdges().end());
+			auto ele = RidgeConverter::ridgeToHeightmap(edges, w + 1);
+			//hmap->setScale(initial3d::vec3d(5, 5, 5));
+			hmap->setHeights(&ele[0], w + 1, w + 1);
+			gecom::log("Editor") << "Heightmap creation finished";
+		}
+
+		void subdivideAndBranch() {
+
+		}
+
+		bool doLayout(const std::unordered_set<Graph::Node *> &active_nodes) {
+			// rough complexity estimate
+			float complexity = active_nodes.size() * log(graph->getNodes().size());
+			int steps = 20000.f / complexity + 2.f;
+			return graph->doLayout(steps, active_nodes) < steps;
+		}
+
+		bool doLayout() {
+			if (graph->getSelectedNodes().empty()) {
+				// nothing selected, layout all
+				return doLayout(graph->getNodes());
+			} else {
+				// layout selection
+				return doLayout(graph->getSelectedNodes());
+			}
+		}
+
+		Graph * getGraph() { return graph; }
+
+		Heightmap * getHeightmap() {
+			return hmap;
+		}
 
 		bool enableEventDispatch(bool b) {
 			if (weproxy_sub.enable(b)) {
@@ -574,8 +734,6 @@ namespace skadi {
 		//
 		Camera *camera;
 
-		int size;
-
 		// Graph
 		//
 		Graph *graph;
@@ -596,6 +754,17 @@ namespace skadi {
 		GLuint shdr_brush;
 		GLuint vao_brush;
 		GLuint vbo_brush_angles;
+
+		GLuint fbo_graph;
+		GLuint tex_graph;
+
+		static const int graph_tex_width = 2048;
+
+		Heightmap *hmap;
+
+		bool should_make_hmap = false;
+		bool should_do_layout = false;
+		bool should_expand_graph = false;
 
 	};
 }

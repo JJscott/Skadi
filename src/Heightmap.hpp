@@ -27,6 +27,10 @@ namespace skadi {
 			glGenBuffers(1, &vbo_pos);
 			glGenBuffers(1, &vbo_uv);
 			genMesh(width, height);
+
+			float f = 0.f;
+			setHeights(&f, 1, 1);
+
 		}
 
 		// width and height are number of EDGES, not VERTICES
@@ -34,6 +38,10 @@ namespace skadi {
 
 			m_width = width;
 			m_height = height;
+
+			std::vector<GLuint> idx;
+			std::vector<float> pos;
+			std::vector<float> uv;
 
 			for (int y = 0; y <= height; y++) {
 				for (int x = 0; x <= width; x++) {
@@ -48,6 +56,7 @@ namespace skadi {
 
 			auto get_index = [&](int x, int y) -> unsigned {
 				// reserve index 0 for 'not a vertex'
+				// i dont think ^^^ is what this does anymore...
 				if (x < 0 || x > width) return 0;
 				if (y < 0 || y > height) return 0;
 				return unsigned(width + 1) * unsigned(y) + unsigned(x);
@@ -253,7 +262,7 @@ namespace skadi {
 			return initial3d::mat4f::translate(m_position) * initial3d::mat4f::scale(m_scale);
 		}
 
-		void draw(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
+		void draw(initial3d::mat4f worldViewMat, initial3d::mat4f projMat, GLuint tex = 0) {
 
 			static GLuint prog = 0;
 			static const char *shader_prog_src = R"delim(
@@ -262,6 +271,7 @@ namespace skadi {
 			uniform mat4 projectionMatrix;
 			uniform sampler2D sampler_heightmap;
 			uniform sampler2D sampler_normalmap;
+			uniform sampler2D sampler_diffuse;
 
 			#ifdef _VERTEX_
 
@@ -272,6 +282,7 @@ namespace skadi {
 			out VertexData {
 				vec3 pos_w;
 				vec3 norm_w;
+				vec2 uv;
 			} vertex_out;
 
 			void main() {
@@ -280,6 +291,7 @@ namespace skadi {
 				gl_Position = projectionMatrix * vec4(pos_v, 1.0);
 				vertex_out.pos_w = pos_w;
 				vertex_out.norm_w = texture(sampler_normalmap, uv).xyz;
+				vertex_out.uv = uv;
 			}
 
 			#endif
@@ -290,12 +302,13 @@ namespace skadi {
 			in VertexData {
 				vec3 pos_w;
 				vec3 norm_w;
+				vec2 uv;
 			} vertex_in;
 
 			out vec4 frag_color;
 
 			void main() {
-				float d = normalize(vertex_in.norm_w).y;
+				vec3 d = normalize(vertex_in.norm_w).y * texture(sampler_diffuse, vertex_in.uv).rgb;
 				frag_color = vec4(vec3(d * 0.8), 1.0);
 			}
 
@@ -305,6 +318,22 @@ namespace skadi {
 
 			if (prog == 0) {
 				prog = makeShaderProgram("330 core", { GL_VERTEX_SHADER, GL_FRAGMENT_SHADER }, shader_prog_src);
+			}
+
+			static GLuint tex_default = 0;
+
+			if (tex_default == 0) {
+				// single pixel white texture
+				glGenTextures(1, &tex_default);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, tex_default);
+				float f[] { 1.f, 1.f, 1.f, 1.f };
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_FLOAT, f);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			}
 
 
@@ -317,23 +346,31 @@ namespace skadi {
 			glBindTexture(GL_TEXTURE_2D, tex_height);
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, tex_norm);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, tex ? tex : tex_default);
 			glUniform1i(glGetUniformLocation(prog, "sampler_heightmap"), 0);
 			glUniform1i(glGetUniformLocation(prog, "sampler_normalmap"), 1);
+			glUniform1i(glGetUniformLocation(prog, "sampler_diffuse"), 2);
 
 			glBindVertexArray(vao);
-			glDrawElements(GL_TRIANGLES, idx.size(), GL_UNSIGNED_INT, nullptr);
+			glDrawElements(GL_TRIANGLES, 6 * m_width * m_height, GL_UNSIGNED_INT, nullptr);
 			glBindVertexArray(0);
 
 			glUseProgram(0);
 		}
 
+		int getMeshWidth() {
+			return m_width;
+		}
+
+		int getMeshHeight() {
+			return m_height;
+		}
+
 	private:
 		int m_width;
 		int m_height;
-		std::vector<GLuint> idx;
-		std::vector<float> pos;
-		std::vector<float> uv;
-
+		
 		GLuint vao = 0;
 		GLuint ibo = 0;
 		GLuint vbo_pos = 0;

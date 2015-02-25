@@ -1,4 +1,23 @@
 
+/*
+
+editor controls, probably:
+
+0-9: set brush
+WASD: move
+R: clear selection
+DEL: delete selection
+L: toggle layout on selection or everything
+K: toggle automatic graph subdivision and branching (not implemented yet)
+
+global:
+TAB: switch views
+F1: toggle graph texture on mesh
+
+*/
+
+
+
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -25,6 +44,7 @@ gecom::Window *win;
 skadi::Projection *projection;
 skadi::Camera *camera;
 skadi::GraphEditor *graphEditor;
+skadi::Heightmap *heightmap;
 
 
 void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
@@ -54,7 +74,8 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 		g->addEdge(n7, n8);
 		g->addEdge(n8, n9);
 
-		auto ele = RidgeConverter::ridgeToHeightmap(g->getEdges(), size);
+		std::vector<Graph::Edge *> edges(g->getEdges().begin(), g->getEdges().end());
+		auto ele = RidgeConverter::ridgeToHeightmap(edges, size);
 
 		hm = new Heightmap(512, 512);
 		hm->setScale(initial3d::vec3d(5, 5, 5));
@@ -64,7 +85,7 @@ void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat
 	hm->draw(worldViewMat, projMat);
 }
 
-void display(int w, int h) {
+void display(int w, int h, bool textured = false) {
 	float zfar = 20000.0f;
 
 	projection->setPerspectiveProjection(math::pi() / 3, double(w) / h, 0.1, zfar);
@@ -80,7 +101,14 @@ void display(int w, int h) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
-	draw_test_heightmap(view_matrix, proj_matrix);
+	GLuint tex = textured ? graphEditor->makeGraphTexture() : 0;
+
+	glViewport(0, 0, w, h);
+
+	heightmap->setScale(initial3d::vec3d(5, 5, 5));
+
+	//draw_test_heightmap(view_matrix, proj_matrix);
+	heightmap->draw(view_matrix, proj_matrix, tex);
 
 	glFinish();
 
@@ -88,9 +116,6 @@ void display(int w, int h) {
 
 void displayEditor(int w, int h) {
 	graphEditor->update();
-
-	Graph *g = graphEditor->getGraph();
-	g->doLayout(10, g->getNodes());
 
 	glClearColor(1.f, 1.f, 1.f, 1.f);
 
@@ -129,6 +154,7 @@ int main() {
 	win->makeContextCurrent();
 
 	bool editor_enabled = true;
+	bool textured_mesh = true;
 
 	win->onKeyPress.subscribe([&](const gecom::key_event &e) {
 		if (e.key == GLFW_KEY_TAB) {
@@ -136,13 +162,18 @@ int main() {
 			graphEditor->enableEventDispatch(!editor_enabled);
 			editor_enabled = !editor_enabled;
 		}
+
+		if (e.key == GLFW_KEY_F1) {
+			textured_mesh = !textured_mesh;
+		}
+
 		return false;
 	}).forever();
 
 	projection = new Projection();
 	camera = new FPSCamera(win, vec3d(0, 0, 3), 0, 0 );
-
-	graphEditor = new GraphEditor(win, size);
+	heightmap = new Heightmap(size, size);
+	graphEditor = new GraphEditor(win, heightmap);
 
 	double lastFPSTime = glfwGetTime();
 	int fps = 0;
@@ -156,10 +187,11 @@ int main() {
 
 		// render!
 		if (size.w != 0 && size.h != 0) {
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			if (editor_enabled) {
 				displayEditor(size.w, size.h);
 			} else {
-				display(size.w, size.h);
+				display(size.w, size.h, textured_mesh);
 			}
 		}
 
@@ -168,7 +200,7 @@ int main() {
 
 		if (now - lastFPSTime > 1) {
 			char fpsString[200];
-			sprintf(fpsString, "Skiro [%d FPS @%dx%d]", fps, win->width(), win->height());
+			sprintf(fpsString, "Skadi [%d FPS @%dx%d]", fps, win->width(), win->height());
 			win->title(fpsString);
 			fps = 0;
 			lastFPSTime = now;

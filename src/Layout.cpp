@@ -316,7 +316,7 @@ namespace {
 namespace skadi {
 
 
-	int Graph::doLayout(int steps, const std::vector<Node *> &active_nodes) {
+	int Graph::doLayout(int steps, const std::unordered_set<Node *> &active_nodes) {
 
 		// tree of nodes that will not move
 		bh_tree bht0;
@@ -324,7 +324,7 @@ namespace skadi {
 		// build tree of nodes that wont move (or otherwise change)
 		// NOTE this is slow with VS debugger attached, even a release-mode build
 		for (auto n : nodes) {
-			if (n->fixed || find(active_nodes.begin(), active_nodes.end(), n) == active_nodes.end()) {
+			if (n->fixed || active_nodes.find(n) == active_nodes.end()) {
 				// node fixed or not active
 				bht0.insert(n);
 			}

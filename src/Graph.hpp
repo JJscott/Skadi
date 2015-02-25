@@ -28,6 +28,13 @@ namespace skadi {
 			void removeEdge(Edge *e) { edges.erase(e); }
 			bool containsEdge(Edge *e) const { return edges.find(e) != edges.end(); }
 
+			Edge * findEdge(Node *n) {
+				for (Edge *e : edges) {
+					if (e->other(this) == n) return e;
+				}
+				return nullptr;
+			}
+
 			initial3d::float3 position; //values of [0,1]
 
 			// for layout
@@ -52,8 +59,9 @@ namespace skadi {
 		public:
 
 			Node * other(Node *n) const {
+				// ben-certified
 				assert(n == node1 || n == node2);
-				return reinterpret_cast<Node *>(uintptr_t(node1) ^ uintptr_t(node2) ^ uintptr_t(n)); //Ben TODO check this
+				return reinterpret_cast<Node *>(uintptr_t(node1) ^ uintptr_t(node2) ^ uintptr_t(n));
 			}
 
 			Node * getNode1() { return node1; }
@@ -85,19 +93,18 @@ namespace skadi {
 			}
 		}
 
-		//creates an edges for the given nodes if they are recorded in this graph
-		//Returns true if edge creation was successful
+		// Ensures an edge between the given nodes exists.
+		// Returns a new edge, or an existing equivalent one.
+		// Returns null if either node is not part of this graph.
 		Edge * addEdge(Node *n1, Node *n2) {
-			if (std::find(nodes.begin(), nodes.end(), n1) != nodes.end() &&
-				std::find(nodes.begin(), nodes.end(), n2) != nodes.end()) {
+			if (nodes.find(n1) != nodes.end() && nodes.find(n2) != nodes.end()) {
 				for (Edge *e : n1->getEdges()) {
-					if (n2->containsEdge(e))
-						return nullptr;
+					if (e->other(n1) == n2) return e;
 				}
 				Edge *e = new Edge(n1, n2);
 				n1->addEdge(e);
 				n2->addEdge(e);
-				edges.push_back(e);
+				edges.insert(e);
 				return e;
 			}
 			return nullptr;
@@ -105,12 +112,12 @@ namespace skadi {
 
 		Node * addNode(initial3d::vec3f pos, float ele = 0, float sharp = 0) {
 			Node *n = new Node(pos, ele, sharp);
-			nodes.push_back(n);
+			nodes.insert(n);
 			return n;
 		}
 
 		bool deleteEdge(Edge *e) {
-			auto it = std::find(edges.begin(), edges.end(), e);
+			auto it = edges.find(e);
 			if (it != edges.end()) {
 				e->getNode1()->removeEdge(e);
 				e->getNode2()->removeEdge(e);
@@ -121,9 +128,14 @@ namespace skadi {
 			return false;
 		}
 			
-		bool removeNode(Node *n) {
-			auto it = std::find(nodes.begin(), nodes.end(), n);
+		bool deleteNode(Node *n) {
+			auto it = nodes.find(n);
 			if (it != nodes.end()) {
+				selected_nodes.erase(n);
+				std::unordered_set<Edge *> edges0 = n->getEdges();
+				for (Edge *e : edges0) {
+					deleteEdge(e);
+				}
 				nodes.erase(it);
 				return true;
 			}
@@ -131,11 +143,11 @@ namespace skadi {
 		}
 
 
-		const std::vector<Node *> & getNodes() const {
+		const std::unordered_set<Node *> & getNodes() const {
 			return nodes;
 		}
 
-		const std::vector<Edge *> & getEdges() const {
+		const std::unordered_set<Edge *> & getEdges() const {
 			return edges;
 		}
 
@@ -143,14 +155,21 @@ namespace skadi {
 			return selected_nodes;
 		}
 
+		void clearSelection() {
+			for (Node *n : selected_nodes) {
+				n->selected = false;
+			}
+			selected_nodes.clear();
+		}
+
 		// attempt some number of layout steps.
 		// stops when average speed drops below threshold.
 		// returns number of steps actually taken.
-		int doLayout(int steps, const std::vector<Node *> &active_nodes);
+		int doLayout(int steps, const std::unordered_set<Node *> &active_nodes);
 
 	private:
-		std::vector<Node *> nodes;
-		std::vector<Edge *> edges;
+		std::unordered_set<Node *> nodes;
+		std::unordered_set<Edge *> edges;
 
 		std::unordered_set<Node *> selected_nodes;
 
