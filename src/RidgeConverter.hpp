@@ -299,7 +299,7 @@ namespace skadi {
 
 				std::vector<index> indices = getLine(
 					int(v1.x() * size), int(v2.x() * size),
-					int(v1.z() * size), int(v2.z() * size));
+					int(v1.y() * size), int(v2.y() * size));
 
 				int i1 = 0;
 				int i2 = indices.size()-1;
