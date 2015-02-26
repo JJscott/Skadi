@@ -19,6 +19,7 @@ global:
 
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 #include <stdexcept>
@@ -137,6 +138,8 @@ void displayEditor(int w, int h) {
 
 int main() {
 
+	std::cout << std::boolalpha;
+
 	if (std::thread::hardware_concurrency()) {
 		// leave a thread for UI
 		unsigned tc = max(std::thread::hardware_concurrency() - 1, 1u);
@@ -200,7 +203,11 @@ int main() {
 
 		if (now - lastFPSTime > 1) {
 			char fpsString[200];
-			sprintf(fpsString, "Skadi [%d FPS @%dx%d]", fps, win->width(), win->height());
+			sprintf(
+				fpsString, "Skadi [%d FPS @%dx%d] [%d/%d Nodes, %d SPS]",
+				fps, win->width(), win->height(), graphEditor->getActiveNodeCount(),
+				graphEditor->getGraph()->getNodes().size(), graphEditor->pollStepCount()
+			);
 			win->title(fpsString);
 			fps = 0;
 			lastFPSTime = now;

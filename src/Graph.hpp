@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <unordered_set>
 #include <vector>
+#include <random>
 
 
 #include "Initial3D.hpp"
@@ -40,14 +41,24 @@ namespace skadi {
 			// for layout
 			initial3d::float3 velocity;
 			float mass = 1.f;
-			float charge = 8.f;
+			float charge = 1.f;
 
-			float elevation = 0;
+			float elevation = 0.f;
 			float sharpness = 0.f;
 			bool selected = false;
 			
 			// is the node locked in place
 			bool fixed = false;
+
+			float split_priority() {
+				return 1;
+			}
+
+			float branch_priority() {
+				// i think random branching works at least as well as any prioritzation ive come up with
+				static std::default_random_engine rand;
+				return std::uniform_real_distribution<float>(0.f, 1.f)(rand);
+			}
 
 		private:
 			std::unordered_set<Edge *> edges;

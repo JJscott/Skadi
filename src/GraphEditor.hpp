@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <random>
+#include <string>
 
 #include "Camera.hpp"
 #include "Graph.hpp"
@@ -147,11 +149,13 @@ namespace skadi {
 				// enable / disable layout
 				if (e.key == GLFW_KEY_L) {
 					should_do_layout = !should_do_layout;
+					std::cout << "Layout enabled: " << should_do_layout << std::endl;
 				}
 
 				// enable / disable automatic edge splitting and node branching
 				if (e.key == GLFW_KEY_K) {
 					should_expand_graph = !should_expand_graph;
+					std::cout << "Graph expansion enabled: " << should_expand_graph << std::endl;
 				}
 
 				return false;
@@ -386,6 +390,7 @@ namespace skadi {
 			glfwGetCursorPos(window->handle(), &mme.pos.x, &mme.pos.y);
 			weproxy->dispatchMouseEvent(mme);
 
+			active_node_count = 0;
 			if (should_do_layout) {
 				if (doLayout() && should_expand_graph) {
 					subdivideAndBranch();
@@ -667,15 +672,101 @@ namespace skadi {
 			gecom::log("Editor") << "Heightmap creation finished";
 		}
 
-		void subdivideAndBranch() {
+		void subdivideAndBranch(const std::unordered_set<Graph::Node *> active_nodes) {
+			using namespace std;
+			using namespace initial3d;
+
+			default_random_engine rand;
+
+			//uniform_int_distribution<unsigned> bd(0, 1);
+
+			// make 'old' active nodes heavier, and fix the heaviest
+			for (Graph::Node *n : active_nodes) {
+				n->mass *= 1.5f;
+				if (n->mass > 20.f && n->getEdges().size() > 2) {
+					// only fix nodes with sufficient neighbours
+					n->fixed = true;
+				}
+			}
+
+			// subdivide some edges (elevation is averaged then randomly modified)
+			priority_queue<node_split_ptr> split_q;
+			for (Graph::Node *n : active_nodes) {
+				split_q.push(n);
+			}
+			for (unsigned i = 0; i < active_nodes.size() / 15 + 1; i++) {
+				Graph::Node *n0 = split_q.top().get();
+				split_q.pop();
+				// skip some? idk why
+				//if (bd(rand)) continue;
+				// get highest priority connected node
+				priority_queue<node_split_ptr> q2;
+				for (Graph::Edge *e : n0->getEdges()) {
+					q2.push(e->other(n0));
+				}
+				Graph::Node *n1 = q2.top().get();
+				assert(n1);
+				uniform_real_distribution<float> fd(0, 1);
+				// new node at midpoint
+				Graph::Node *n2 = graph->addNode(float3::mixf(n0->position, n1->position, fd(rand)));
+				// average elevation
+				n2->elevation = 0.5f * (n0->elevation + n1->elevation);
+				// randomly modify elevation
+				n2->elevation *= 1.f + (fd(rand) - 0.4f);
+				// average charge
+				n2->charge = 0.5f * (n0->charge + n1->charge);
+				// split the edge
+				graph->deleteEdge(n0->findEdge(n1));
+				graph->addEdge(n0, n2);
+				graph->addEdge(n2, n1);
+				// if starting node was selected, propagate
+				if (n0->selected) graph->select(n2, true);
+			}
+
+			// make some branches (elevation is reduced)
+			priority_queue<node_branch_ptr> branch_q;
+			for (Graph::Node *n : active_nodes) {
+				branch_q.push(n);
+			}
+			//uniform_int_distribution<unsigned> nodes_dist(0, active_nodes.size() - 1);
+			for (unsigned i = 0; i < active_nodes.size() / 15 + 1; i++) {
+				Graph::Node *n0 = branch_q.top().get();
+				branch_q.pop();
+				//Graph::Node *n0 = active_nodes[nodes_dist(rand)]; 
+				// max allowed edges is 4
+				if (n0->getEdges().size() >= 4) continue;
+				// skip some? idk why
+				//if (bd(rand)) continue;
+				uniform_real_distribution<float> pd(-0.01, 0.01);
+				// new node at randomly modified position
+				Graph::Node *n2 = graph->addNode(n0->position + float3(pd(rand), pd(rand), 0));
+				// reduce elevation
+				n2->elevation = n0->elevation * 0.9f;
+				// reduce charge
+				n2->charge = n0->charge * 0.9f;
+				// create edge
+				graph->addEdge(n0, n2);
+				// if starting node was selected, propagate
+				if (n0->selected) graph->select(n2, true);
+			}
+
 
 		}
 
 		bool doLayout(const std::unordered_set<Graph::Node *> &active_nodes) {
+			// set active node count
+			active_node_count = 0;
+			for (Graph::Node *n : active_nodes) {
+				active_node_count += !n->fixed;
+			}
 			// rough complexity estimate
-			float complexity = active_nodes.size() * log(graph->getNodes().size());
-			int steps = 30000.f / complexity + 2.f;
-			return graph->doLayout(steps, active_nodes) < steps;
+			float complexity = active_node_count * log(graph->getNodes().size());
+			int steps0 = 30000.f / complexity + 2.f;
+			// TODO account for cost of tree building
+			int steps1 = graph->doLayout(steps0, active_nodes);
+			// accumulate total steps
+			step_count += steps1;
+			return steps1 < steps0;
 		}
 
 		bool doLayout() {
@@ -686,6 +777,26 @@ namespace skadi {
 				// layout selection
 				return doLayout(graph->getSelectedNodes());
 			}
+		}
+
+		void subdivideAndBranch() {
+			if (graph->getSelectedNodes().empty()) {
+				// nothing selected, expand all
+				subdivideAndBranch(graph->getNodes());
+			} else {
+				// expand selection
+				subdivideAndBranch(graph->getSelectedNodes());
+			}
+		}
+
+		int getActiveNodeCount() {
+			return active_node_count;
+		}
+
+		int pollStepCount() {
+			int r = step_count;
+			step_count = 0;
+			return r;
 		}
 
 		Graph * getGraph() { return graph; }
@@ -767,6 +878,63 @@ namespace skadi {
 		bool should_make_hmap = false;
 		bool should_do_layout = false;
 		bool should_expand_graph = false;
+
+		// layout stats
+		int active_node_count = 0;
+		int step_count;
+
+		class node_ptr {
+		private:
+			Graph::Node *m_ptr;
+
+		public:
+			node_ptr(Graph::Node *ptr) : m_ptr(ptr) { }
+
+			Graph::Node * get() const {
+				return m_ptr;
+			}
+
+			Graph::Node & operator*() {
+				return *m_ptr;
+			}
+
+			const Graph::Node & operator*() const {
+				return *m_ptr;
+			}
+
+			Graph::Node * operator->() {
+				return m_ptr;
+			}
+
+			const Graph::Node * operator->() const {
+				return m_ptr;
+			}
+		};
+
+		class node_split_ptr : public node_ptr {
+		private:
+			float m_x;
+
+		public:
+			node_split_ptr(Graph::Node *n) : node_ptr(n), m_x(n->split_priority()) { }
+
+			bool operator<(const node_split_ptr &n) const {
+				return m_x < n.m_x;
+			}
+		};
+
+		class node_branch_ptr : public node_ptr {
+		private:
+			float m_x;
+
+		public:
+			node_branch_ptr(Graph::Node *n) : node_ptr(n), m_x(n->branch_priority()) { }
+
+			bool operator<(const node_branch_ptr &n) const {
+				return m_x < n.m_x;
+			}
+		};
+
 
 	};
 }
