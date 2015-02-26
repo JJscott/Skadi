@@ -365,6 +365,9 @@ namespace skadi {
 					f += e->spring * v; // spring constant
 				}
 
+				// drag force
+				//f -= n0->velocity * n0->velocity.mag() * 1000.f;
+
 				// acceleration
 				float3 a = f / n0->mass;
 
@@ -372,7 +375,7 @@ namespace skadi {
 				n0->velocity += a * timestep;
 
 				// damping
-				n0->velocity *= 0.995;
+				n0->velocity *= 0.98;
 
 				speed_sum += n0->velocity.mag();
 			}
@@ -385,7 +388,7 @@ namespace skadi {
 			}
 
 			// TODO tune threshold
-			if (speed_sum / nodes0.size() < 2.f) return step;
+			if (timestep * speed_sum / nodes0.size() < 0.0001f) return step + 1;
 		}
 
 		return steps;
