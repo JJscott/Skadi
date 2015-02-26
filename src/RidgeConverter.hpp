@@ -165,6 +165,9 @@ namespace skadi {
 			}
 			if (reverse)
 				std::reverse(indices.begin(), indices.end());
+
+			assert(!indices.empty());
+
 			return indices;
 		};
 
