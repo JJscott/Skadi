@@ -198,7 +198,7 @@ namespace skadi {
 
 			assert(!indices.empty());
 
-			if (indices[0].x != x1) {
+			if (!(indices[0] == index(x1, y1))) {
 				// make sure the indices start at x1,y1
 				std::reverse(indices.begin(), indices.end());
 			}
