@@ -287,7 +287,7 @@ namespace skadi {
 			// };
 
 			auto getIdx = [&](index i) -> unsigned {
-				return unsigned(size * i.x + i.y);
+				return unsigned(size * i.y + i.x);
 			};
 
 			auto distanceBetween = [&](const index &a, const index &b) -> float {
