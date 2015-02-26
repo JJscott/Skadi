@@ -204,14 +204,14 @@ namespace skadi {
 			out VertexData {
 				vec3 pos_m;
 				flat bool selected;
-				flat bool fixed;
+				flat bool fixednode;
 			} vertex_out;
 
 			void main() {
 				vertex_out.pos_m = vec3(pos_m.x, pos_m.y, 0.9);
 				uint flags = floatBitsToUint(pos_m.w);
 				vertex_out.selected = bool(flags & 0x1u);
-				vertex_out.fixed = bool(flags & 0x2u);
+				vertex_out.fixednode = bool(flags & 0x2u);
 			}
 
 			#endif
@@ -224,13 +224,13 @@ namespace skadi {
 			in VertexData {
 				vec3 pos_m;
 				flat bool selected;
-				flat bool fixed;
+				flat bool fixednode;
 			} vertex_in[];
 
 			out VertexData {
 				vec3 pos_v;
 				flat bool selected;
-				flat bool fixed;
+				flat bool fixednode;
 			} vertex_out;
 			
 			void main() {
@@ -239,7 +239,7 @@ namespace skadi {
 				//vec3 pos_v = (vec4(vertex_in[0].pos_m, 1.0)).xyz;
 
 				vertex_out.selected = vertex_in[0].selected;
-				vertex_out.fixed = vertex_in[0].fixed;
+				vertex_out.fixednode = vertex_in[0].fixednode;
 
 				vertex_out.pos_v = pos_v + vec3(-2, -2, 0);
 				gl_Position = projectionMatrix * vec4(vertex_out.pos_v, 1.0);
@@ -267,7 +267,7 @@ namespace skadi {
 			in VertexData {
 				vec3 pos_v;
 				flat bool selected;
-				flat bool fixed;
+				flat bool fixednode;
 			} vertex_in;
 
 			out vec4 frag_color;
@@ -275,7 +275,7 @@ namespace skadi {
 			void main() {
 				if (vertex_in.selected) {
 					frag_color = vec4(0.1, 0.8, 0.1, 1.0);
-				} else if (vertex_in.fixed) {
+				} else if (vertex_in.fixednode) {
 					frag_color = vec4(0.0, 0.0, 0.0, 1.0);
 				} else {
 					frag_color = vec4(vec3(0.5), 1.0);
@@ -592,7 +592,7 @@ namespace skadi {
 				
 				const vec2[] p = vec2[](vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0), vec2(0.0, 0.0));
 				
-				for (int i = 0; i < p.length; i++) {
+				for (int i = 0; i < p.length(); i++) {
 					gl_Position = projectionMatrix * modelViewMatrix * vec4(p[i], 0.99, 1.0);
 					EmitVertex();
 				}

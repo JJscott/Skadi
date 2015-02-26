@@ -47,43 +47,43 @@ skadi::GraphEditor *graphEditor;
 skadi::Heightmap *heightmap;
 
 
-void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
-	static int size =  513;
-	static Heightmap *hm = nullptr;
-
-	if (hm == nullptr) {
-		Graph *g = new Graph();
-
-		Graph::Node *n1 = g->addNode(vec3f(0.4, 0.5, 0.4));
-		Graph::Node *n2 = g->addNode(vec3f(0.35, 0.7, 0.1));
-		Graph::Node *n3 = g->addNode(vec3f(0.2, 0.5, 0.35));
-		Graph::Node *n4 = g->addNode(vec3f(0.6, 0.7, 0.42));
-		Graph::Node *n5 = g->addNode(vec3f(0.86, 0.5, 0.35));
-		Graph::Node *n6 = g->addNode(vec3f(0.9, 0.7, 0.5));
-		Graph::Node *n7 = g->addNode(vec3f(0.42, 0.5, 0.8));
-		Graph::Node *n8 = g->addNode(vec3f(0.62, 0.7, 0.9));
-		Graph::Node *n9 = g->addNode(vec3f(0.76, 0.7, 0.82));
-
-
-		g->addEdge(n1, n2);
-		g->addEdge(n1, n3);
-		g->addEdge(n1, n4);
-		g->addEdge(n4, n5);
-		g->addEdge(n4, n6);
-		g->addEdge(n1, n7);
-		g->addEdge(n7, n8);
-		g->addEdge(n8, n9);
-
-		std::vector<Graph::Edge *> edges(g->getEdges().begin(), g->getEdges().end());
-		auto ele = RidgeConverter::ridgeToHeightmap(edges, size);
-
-		hm = new Heightmap(512, 512);
-		hm->setScale(initial3d::vec3d(5, 5, 5));
-		hm->setHeights(&ele[0], size, size);
-	}
-
-	hm->draw(worldViewMat, projMat);
-}
+//void draw_test_heightmap(initial3d::mat4f worldViewMat, initial3d::mat4f projMat) {
+//	static int size =  513;
+//	static Heightmap *hm = nullptr;
+//
+//	if (hm == nullptr) {
+//		Graph *g = new Graph();
+//
+//		Graph::Node *n1 = g->addNode(vec3f(0.4, 0.5, 0.4));
+//		Graph::Node *n2 = g->addNode(vec3f(0.35, 0.7, 0.1));
+//		Graph::Node *n3 = g->addNode(vec3f(0.2, 0.5, 0.35));
+//		Graph::Node *n4 = g->addNode(vec3f(0.6, 0.7, 0.42));
+//		Graph::Node *n5 = g->addNode(vec3f(0.86, 0.5, 0.35));
+//		Graph::Node *n6 = g->addNode(vec3f(0.9, 0.7, 0.5));
+//		Graph::Node *n7 = g->addNode(vec3f(0.42, 0.5, 0.8));
+//		Graph::Node *n8 = g->addNode(vec3f(0.62, 0.7, 0.9));
+//		Graph::Node *n9 = g->addNode(vec3f(0.76, 0.7, 0.82));
+//
+//
+//		g->addEdge(n1, n2);
+//		g->addEdge(n1, n3);
+//		g->addEdge(n1, n4);
+//		g->addEdge(n4, n5);
+//		g->addEdge(n4, n6);
+//		g->addEdge(n1, n7);
+//		g->addEdge(n7, n8);
+//		g->addEdge(n8, n9);
+//
+//		std::vector<Graph::Edge *> edges(g->getEdges().begin(), g->getEdges().end());
+//		auto ele = RidgeConverter::ridgeToHeightmap(edges, size);
+//
+//		hm = new Heightmap(512, 512);
+//		hm->setScale(initial3d::vec3d(5, 5, 5));
+//		hm->setHeights(&ele[0], size, size);
+//	}
+//
+//	hm->draw(worldViewMat, projMat);
+//}
 
 void display(int w, int h, bool textured = false) {
 	float zfar = 20000.0f;
