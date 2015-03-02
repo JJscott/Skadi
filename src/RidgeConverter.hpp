@@ -61,6 +61,10 @@ namespace skadi {
 
 namespace skadi {
 
+	inline void really_assert(bool b) {
+		if (!b) throw "nope!";
+	}
+
 	inline uint32_t gcdpow2(uint32_t x0) {
 		// ensure highest bit is set in argument for sane result
 		return 1u << bit_scan_forward((1u << 31) | x0);
@@ -99,12 +103,12 @@ namespace skadi {
 				return (x == other.x) && (y == other.y);
 			}
 
-			int squarity() const {
+			unsigned squarity() const {
 				return !((y - x) & ((gcdpow2(x) << 1u) - 1u));
 			}
 
 			void parents(index *p) const {
-				int r = gcdpow2(x, y);
+				int r = parent_radius();
 				int smask = squarity() ? -1 : 0;
 				p[0].x = x + r;
 				p[0].y = y + (r & smask);
@@ -116,9 +120,32 @@ namespace skadi {
 				p[3].y = y - r;
 			}
 
-			int recursion_height() const {
+			unsigned parent_radius() const {
+				return gcdpow2(x, y);
+			}
+
+			unsigned recursion_height() const {
 				return (bit_scan_forward((1u << 31) | x | y) << 1u) + squarity();
 			}
+
+			bool parent_of(const index &p) const {
+				if (*this == p) return false;
+				// test feasibility
+				// TODO is this correct?
+				if (this->parent_radius() < p.parent_radius()) return false;
+				index a[4];
+				p.parents(a);
+				// test direct parents
+				for (int i = 0; i < 4; i++) {
+					if (*this == a[i]) return true;
+				}
+				// test recursive parents
+				for (int i = 0; i < 4; i++) {
+					if (parent_of(a[i])) return true;
+				}
+				return false;
+			}
+
 		};
 
 		struct IndexHasher {
@@ -404,256 +431,130 @@ namespace skadi {
 			diamondSquare(compileParents, size);
 
 
-			// // MBDU
-			// //
-			// std::unordered_map<index, std::vector<index>, IndexHasher> children;
-			// std::queue<index> fq;
+			std::function<void(const index &, const std::vector<index> &)> verifyParents;
+			verifyParents = [&](const index &a, const std::vector<index> &p) {
 
-			// //std::cout << "MDBU" << std::endl
+				really_assert(!a.parent_of(a));
 
-			// for (Graph::Edge *e : edges) {
-			// 	constrainEdge(e);
-			// }
+				for (const index &b : p) {
+					really_assert(b.parent_of(a));
+					really_assert(!a.parent_of(b));
+					verifyParents(a, cellParents[getIdx(b)]);
+				}
 
-			// for (index i : constraints) {
-			// 	fq.push(i);
-			// }
 
-			// while (!fq.empty()) {
-			// 	// std::cout << "Starting loop" << std::endl;
-			// 	// std::cout << "queue size : " << fq.size() << std::endl;
+			};
 
-			// 	while (!fq.empty()) {
-
-			// 		index cell = fq.front();
-			// 		unsigned cellIndex = getIdx(cell);
-			// 		fq.pop();
-
-			// 		// std::cout << "Popped index  :: " << cell.x << "," << cell.y << std::endl;
-			// 		// std::cout << "queue size : " << fq.size() << std::endl;
-
-			// 		// For each parent, add this cell to their list of children
-			// 		//
-			// 		// std::cout << "Set of parents {" << std::endl;
-			// 		for (index par : cellParents[cellIndex]) {
-
-			// 			int parIndex = getIdx(par);
-			// 			if (!elevationKnown[parIndex]) {
-			// 				if (children.find(par) != children.end()) {
-			// 					children[par] = std::vector<index>();
-			// 				} 
-			// 				children[par].push_back(cell);
-			// 				// std::cout << "(" << par.x << "," << par.y << ")";
-			// 			}
-			// 		}
-			// 		// std::cout << "}" << std::endl;
-			// 	}
-
-			// 	// For each parent, child set, pair, estimate the elevation of the parent
-			// 	//
-			// 	// std::cout << std::endl << "CALCULATING HEIGHTMAP " << std::endl;
-			// 	for (auto it = children.begin(); it != children.end(); it++) {
-			// 		index par = it->first;
-			// 		unsigned parIndex = getIdx(par);
-			// 		elevation[parIndex] = 0;
-
-			// 		// std::cout << "Parent :: (" << par.x << "," << par.y << ")" << std::endl;
-				
-			// 		// Calculating sum of estimated elevation
-			// 		//
-			// 		for (index cell : it->second) {
-			// 			unsigned cellIndex = getIdx(cell);
-			// 			float e = elevationEstimate(
-			// 				elevation[ cellIndex ],
-			// 				// interpolationValue[ cellIndex ],
-			// 			BU_SHARP,
-			// 				distanceBetween(cell, par));
-
-			// 			elevation[parIndex] += e;
-
-			// 			// std::cout << "Child : (" << cell.x << "," << cell.y << ") " << elevation[ cellIndex ] << " => " << e << std::endl;
-			// 		}
-
-			// 		// std::cout << "Parent :: elevation " << elevation[parIndex];
-
-			// 		// Divide estimated sum by n
-			// 		//
-			// 		elevation[parIndex] /= it->second.size();
-
-			// 		// std::cout << " | Final = " << elevation[parIndex] << std::endl << std::endl;
-
-			// 		elevationKnown[parIndex] = true;
-			// 		fq.push(par);
-			// 	}
-			// 	children.clear();
-			// 	// std::cout << " -> Press any key to continue . . . " << std::endl;
-			// 	// std::cin.get();
-			// }
-
-			// // std::vector<index> parToEval;
-
+//#pragma omp parallel for
+//			for (int y = 0; y < size; y++) {
+//				for (int x = 0; x < size; x++) {
+//					index cell(x, y);
+//					unsigned i = getIdx(cell);
+//					verifyParents(cell, cellParents[i]);
+//
+//					std::cout << x << " " << y << std::endl;
+//				}
+//			}
 
 
 			struct compare_indices {
-				bool operator()(index a, index b) {
-					return a.recursion_height() > b.recursion_height();
+				// true if a should be popped after b
+				bool operator()(const index &a, const index &b) {
+					//if (a == b) return false;
+					bool ba = a.parent_of(b);
+					bool bb = b.parent_of(a);
+					assert(!(ba && bb));
+					return ba;
+					//return !bb && (ba || bb);
 				}
 			};
 
 
-			//// Without index parents
-			////
-			//std::unordered_map<index, std::vector<index>, IndexHasher> children;
-			//std::priority_queue<index, std::vector<index>, compare_indices> fq;
-
-			//gecom::log("Heightmap") << "Constrainining edges";
-			//for (Graph::Edge *e : edges) {
-			//	constrainEdge(e);
-			//}
-
-			//gecom::log("Heightmap") << "Pushing constraints";
-			//for (index i : constraints) {
-			//	fq.push(i);
-			//}
-
-			//while(!fq.empty()) {
-			//	// Record the next recursion height
-			//	//
-			//	int current = fq.top().recursion_height();
-
-			//	// While the next cell is at the same recursion height
-			//	//
-			//	do {
-			//		index cell = fq.top();
-			//		unsigned cellIndex = getIdx(cell);
-			//		fq.pop();
-
-			//		// Add the cell to the parent-child list
-			//		//
-			//		for (index par : cellParents[cellIndex]) {
-			//			if (!elevationKnown[getIdx(par)]) {
-			//				if (children.find(par) != children.end()) {
-			//					children[par] = std::vector<index>();
-			//				} 
-			//				children[par].push_back(cell);
-			//			}
-			//		}
-			//	} while (!fq.empty() && fq.top().recursion_height() <= current);
-
-			//	// Process each parent and it's list of children
-			//	//
-			//	for (auto it = children.begin(); it != children.end(); it++) {
-			//		index par = it->first;
-			//		unsigned parIndex = getIdx(par);
-			//		float parElevation = 0;
-
-			//		// For each cell perform a height estimation
-			//		//
-			//		for (index cell : it->second) {
-			//			unsigned cellIndex = getIdx(cell);
-			//			float e = elevationEstimate(
-			//				elevation[ cellIndex ],
-			//				// interpolationValue[ cellIndex ],
-			//				0.4,
-			//				distanceBetween(cell, par));
-
-			//			parElevation += e;
-			//		}
-
-			//		// Set the new parent elevation
-			//		//
-			//		elevation[parIndex] = parElevation / it->second.size();
-			//		elevationKnown[parIndex] = true;
-			//		int rh = par.recursion_height();
-			//		if (rh < size) // TODO change to recursion height max
-			//			fq.push(par);
-			//	}
-			//	children.clear();
-			//}
-
-
 			// With black magic
 			//
-			std::unordered_map<index, std::vector<index>, IndexHasher> children;
+			std::unordered_map<index, std::unordered_set<index, IndexHasher>, IndexHasher> children;
 			std::priority_queue<index, std::vector<index>, compare_indices> fq;
 
-			gecom::log("Heightmap") << "Constrainining edges";
+			gecom::log("Heightmap") << "Constrainining edges..";
 			for (Graph::Edge *e : edges) {
 				constrainEdge(e);
 			}
 
-			gecom::log("Heightmap") << "Pushing constraints";
+			gecom::log("Heightmap") << "Pushing constraints...";
 			for (index i : constraints) {
 				fq.push(i);
 			}
 
-			gecom::log("Heightmap") << "Going to do some black magic";
-			index pArr[4];
+			gecom::log("Heightmap") << "Invoking darker-than-black magic...";
+
+
 			while (!fq.empty()) {
-				// Record the next recursion height
-				//
-				int current = fq.top().recursion_height();
+				
+				
+				index cell = fq.top();
+				fq.pop();
 
-				// While the next cell is at the same recursion height
-				//
-				do {
-					index cell = fq.top();
-					unsigned cellIndex = getIdx(cell);
-					fq.pop();
-
-					// Add the cell to the parent-child list
-					//
+				// add this cell as a child of its unknown parents, and add those parents to the queue
+				if (!(cell == index(0, 0))) {
+					index pArr[4];
 					cell.parents(pArr);
 					for (int i = 0; i < 4; i++) {
 						index par = pArr[i];
-						if (par.x >= 0 && par.x < size &&
+						if (
+							par.x >= 0 && par.x < size &&
 							par.y >= 0 && par.y < size &&
-							!elevationKnown[getIdx(par)]) {
-							if (children.find(par) != children.end()) {
-								children[par] = std::vector<index>();
+							!elevationKnown[getIdx(par)]
+						) {
+							if (children[par].insert(cell).second) {
+								// only add parent to queue if child not already recorded as such
+								fq.push(par);
 							}
-							children[par].push_back(cell);
 						}
 					}
-				} while (!fq.empty() && fq.top().recursion_height() <= current);
-
-				// Process each parent and it's list of children
-				//
-				for (auto it = children.begin(); it != children.end(); it++) {
-					index par = it->first;
-					unsigned parIndex = getIdx(par);
-					float parElevation = 0;
-
-					// For each cell perform a height estimation
-					//
-					for (index cell : it->second) {
-						unsigned cellIndex = getIdx(cell);
-						float e = elevationEstimate(
-							elevation[cellIndex],
-							// interpolationValue[ cellIndex ],
-							BU_SHARP,
-							distanceBetween(cell, par));
-
-						parElevation += e;
-					}
-
-					// Set the new parent elevation
-					//
-					elevation[parIndex] = parElevation / it->second.size();
-					elevationKnown[parIndex] = true;
-					int rh = par.recursion_height();
-					if (rh < size) // TODO change to recursion height max
-						fq.push(par);
 				}
-				children.clear();
+
+				// index is NOT a good name for the 2D grid position thingy
+				unsigned cell_idx = getIdx(cell);
+				
+				// check for (and avoid) re-evaluation
+				if (elevationKnown[cell_idx]) {
+					continue;
+				}
+
+				// find known children of this cell
+				auto it = children.find(cell);
+				assert(it != children.end());
+				assert(it->second.size() != 0);
+
+				// estimate elevation for this cell from known children
+				float et = 0;
+				for (index child : it->second) {
+					float e = elevationEstimate(
+						elevation[getIdx(child)],
+						// interpolationValue[ cellIndex ],
+						BU_SHARP,
+						distanceBetween(child, cell)
+					);
+					et += e;
+				}
+
+				// set new elevation for this cell
+				elevation[cell_idx] = et / it->second.size();
+				elevationKnown[cell_idx] = true;
+
+				// remove unnecessary entries from children map
+				children.erase(it);
+
 			}
 
 
 			// Top Down Midpoint Displacement
 			//
-			gecom::log("Heightmap") << "Finally midpoint displacement";
+			gecom::log("Heightmap") << "Midpoint displacement...";
 			//std::cout << "MD" << std::endl;
 			diamondSquare(midpointDisplacement, size);
+
+			gecom::log("Heightmap") << "It worked?";
 
 			return elevation;
 		}
@@ -751,5 +652,18 @@ namespace skadi {
 				stepsize /= 2;
 			}
 		}
+
+		static void test_shit() {
+			index a(32, 96);
+			index b(24, 112);
+
+			
+
+			std::cout << a.parent_of(b) << std::endl;
+			std::cout << b.parent_of(a) << std::endl;
+
+
+		}
+
 	};
 }

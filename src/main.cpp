@@ -140,6 +140,8 @@ int main() {
 
 	std::cout << std::boolalpha;
 
+	RidgeConverter::test_shit();
+
 	if (std::thread::hardware_concurrency()) {
 		// leave a thread for UI
 		unsigned tc = max(std::thread::hardware_concurrency() - 1, 1u);
@@ -147,7 +149,8 @@ int main() {
 		gecom::log("OMP") << "Default thread count: " << tc;
 	}
 
-	const int size = 512;
+
+	const int size = 128;
 
 	// randomly placed note about texture parameters and debug messages:
 	// nvidia uses this as mipmap allocation hint; not doing it causes warning spam
