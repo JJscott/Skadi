@@ -37,12 +37,14 @@ namespace skadi {
 #endif
 
 
+#include <cmath>
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <unordered_map>
 #include <queue>
 #include <vector>
+#include <list>
 #include <random>
 #include <iostream>
 #include <iomanip>
@@ -51,7 +53,6 @@ namespace skadi {
 #include "Initial3D.hpp"
 #include "Graph.hpp"
 
-// i reverted these to commit 7cd00b0a cause it almost unbreaks things
 // also, why the fuck did you use defines?
 #define SHARP -0.5
 #define BU_SHARP 4.0
@@ -86,58 +87,23 @@ namespace skadi {
 		println(tr...);
 	}
 
-
-	template <typename RandItT, typename ValT, typename PredT>
-	inline void push_heap_weak_impl(RandItT first, RandItT last, ValT &&val, PredT comp) {
-		// TODO this isnt finished yet
-		// push *last
-		auto hole = last - first;
-		for (auto i = hole; i > 0; ) {
-			// go to parent
-			i = (i - 1) / 2;
-			auto c = comp(val, *(first + i));
-			if (c > 0) {
-				// ordered-after: stop
-				break;
-			} else {
-				// ordered-before or not ordered: move hole and keep searching parents
-				*(first + hole) = std::move(*(first + i));
-				hole = i;
-			}
-		}
-		// move value to final hole
-		*(first + hole) = std::move(val);
-	}
-
-	template <typename RandItT, typename PredT>
-	inline void push_heap_weak(RandItT first, RandItT last, PredT comp) {
-		// push *(last - 1)
-		if (last - first > 1) {
-			--last;
-			auto val = std::move(*last);
-			push_heap_weak_impl(first, last, val, comp);
-		}
-	}
-
-
-	template <typename RandItT, typename PredT>
-	inline void pop_heap_weak(RandItT first, RandItT last, PredT comp) {
-		auto comp2 = [&](const auto &a, const auto &b) {
-			return comp(a, b) > 0;
-		};
-		std::pop_heap(first, last, comp2);
-		assert(std::is_heap(first, last - 1, comp2));
-	}
-
-
-
+	// Priority queue that supports partially-ordered priorities.
+	// Not heap-based because that doesn't seem to be (at all easily) possible.
 	template <typename T, typename CompareT>
-	class weak_priority_queue {
-		std::vector<T> m_data;
+	class partial_priority_queue {
+		std::list<T> m_data;
 		CompareT m_comp;
 
+		void assert_valid() {
+			for (auto it = m_data.begin(); it != m_data.end(); ++it) {
+				for (auto itt = it; itt != m_data.end(); ++itt) {
+					assert(!m_comp(*it, *itt));
+				}
+			}
+		}
+
 	public:
-		weak_priority_queue() { }
+		partial_priority_queue() { }
 
 		bool empty() const {
 			return m_data.empty();
@@ -148,13 +114,15 @@ namespace skadi {
 		}
 
 		void pop() {
-			pop_heap_weak(m_data.begin(), m_data.end(), m_comp);
-			m_data.pop_back();
+			//assert_valid();
+			m_data.pop_front();
 		}
 
 		void push(T t) {
-			m_data.emplace_back(std::move(t));
-			push_heap_weak(m_data.begin(), m_data.end(), m_comp);
+			auto it = m_data.begin();
+			for (; it != m_data.end() && !m_comp(*it, t); ++it);
+			m_data.insert(it, std::move(t));
+			//assert_valid();
 		}
 	};
 
@@ -505,29 +473,14 @@ namespace skadi {
 			diamondSquare(compileParents, size);
 
 
-			std::function<void(const index &, const std::vector<index> &)> verifyParents;
-			verifyParents = [&](const index &a, const std::vector<index> &p) {
-
-				really_assert(!a.parent_of(a));
-
-				for (const index &b : p) {
-					really_assert(b.parent_of(a));
-					really_assert(!a.parent_of(b));
-					verifyParents(a, cellParents[getIdx(b)]);
-				}
-
-
-			};
-
-
+			
 			struct compare_indices {
 				// true if a should be popped after b
 				bool operator()(const index &a, const index &b) {
-					//if (a == b) return false;
 					bool ba = a.parent_of(b);
 					bool bb = b.parent_of(a);
 					assert(!(ba && bb));
-					return bb ? -1 : ba ? 1 : 0;
+					return ba;
 				}
 			};
 
@@ -536,9 +489,9 @@ namespace skadi {
 			// With black magic
 			//
 			std::unordered_map<index, std::unordered_set<index, IndexHasher>, IndexHasher> children;
-			weak_priority_queue<index, compare_indices> fq;
+			partial_priority_queue<index, compare_indices> fq;
 
-			gecom::log("Heightmap") << "Constrainining edges..";
+			gecom::log("Heightmap") << "Constraining edges...";
 			for (Graph::Edge *e : edges) {
 				constrainEdge(e);
 			}
@@ -548,7 +501,7 @@ namespace skadi {
 				fq.push(i);
 			}
 
-			gecom::log("Heightmap") << "Invoking darker-than-black magic...";
+			gecom::log("Heightmap") << "Invoking shitty magic...";
 
 
 			while (!fq.empty()) {
@@ -617,7 +570,7 @@ namespace skadi {
 			//std::cout << "MD" << std::endl;
 			diamondSquare(midpointDisplacement, size);
 
-			gecom::log("Heightmap") << "It worked?";
+			gecom::log("Heightmap") << "Did it work?";
 
 			return elevation;
 		}
@@ -717,14 +670,7 @@ namespace skadi {
 		}
 
 		static void test_shit() {
-			index a(32, 96);
-			index b(24, 112);
-
-			
-
-			std::cout << a.parent_of(b) << std::endl;
-			std::cout << b.parent_of(a) << std::endl;
-
+			using namespace std;
 
 		}
 
