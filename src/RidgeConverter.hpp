@@ -46,6 +46,7 @@ namespace skadi {
 #include <random>
 #include <iostream>
 #include <iomanip>
+#include <utility>
 
 #include "Initial3D.hpp"
 #include "Graph.hpp"
@@ -84,6 +85,79 @@ namespace skadi {
 		std::cout << t1;
 		println(tr...);
 	}
+
+
+	template <typename RandItT, typename ValT, typename PredT>
+	inline void push_heap_weak_impl(RandItT first, RandItT last, ValT &&val, PredT comp) {
+		// TODO this isnt finished yet
+		// push *last
+		auto hole = last - first;
+		for (auto i = hole; i > 0; ) {
+			// go to parent
+			i = (i - 1) / 2;
+			auto c = comp(val, *(first + i));
+			if (c > 0) {
+				// ordered-after: stop
+				break;
+			} else {
+				// ordered-before or not ordered: move hole and keep searching parents
+				*(first + hole) = std::move(*(first + i));
+				hole = i;
+			}
+		}
+		// move value to final hole
+		*(first + hole) = std::move(val);
+	}
+
+	template <typename RandItT, typename PredT>
+	inline void push_heap_weak(RandItT first, RandItT last, PredT comp) {
+		// push *(last - 1)
+		if (last - first > 1) {
+			--last;
+			auto val = std::move(*last);
+			push_heap_weak_impl(first, last, val, comp);
+		}
+	}
+
+
+	template <typename RandItT, typename PredT>
+	inline void pop_heap_weak(RandItT first, RandItT last, PredT comp) {
+		auto comp2 = [&](const auto &a, const auto &b) {
+			return comp(a, b) > 0;
+		};
+		std::pop_heap(first, last, comp2);
+		assert(std::is_heap(first, last - 1, comp2));
+	}
+
+
+
+	template <typename T, typename CompareT>
+	class weak_priority_queue {
+		std::vector<T> m_data;
+		CompareT m_comp;
+
+	public:
+		weak_priority_queue() { }
+
+		bool empty() const {
+			return m_data.empty();
+		}
+
+		const T & top() const {
+			return m_data.front();
+		}
+
+		void pop() {
+			pop_heap_weak(m_data.begin(), m_data.end(), m_comp);
+			m_data.pop_back();
+		}
+
+		void push(T t) {
+			m_data.emplace_back(std::move(t));
+			push_heap_weak(m_data.begin(), m_data.end(), m_comp);
+		}
+	};
+
 
 	class RidgeConverter {
 	private:
@@ -445,17 +519,6 @@ namespace skadi {
 
 			};
 
-//#pragma omp parallel for
-//			for (int y = 0; y < size; y++) {
-//				for (int x = 0; x < size; x++) {
-//					index cell(x, y);
-//					unsigned i = getIdx(cell);
-//					verifyParents(cell, cellParents[i]);
-//
-//					std::cout << x << " " << y << std::endl;
-//				}
-//			}
-
 
 			struct compare_indices {
 				// true if a should be popped after b
@@ -464,16 +527,16 @@ namespace skadi {
 					bool ba = a.parent_of(b);
 					bool bb = b.parent_of(a);
 					assert(!(ba && bb));
-					return ba;
-					//return !bb && (ba || bb);
+					return bb ? -1 : ba ? 1 : 0;
 				}
 			};
 
+			
 
 			// With black magic
 			//
 			std::unordered_map<index, std::unordered_set<index, IndexHasher>, IndexHasher> children;
-			std::priority_queue<index, std::vector<index>, compare_indices> fq;
+			weak_priority_queue<index, compare_indices> fq;
 
 			gecom::log("Heightmap") << "Constrainining edges..";
 			for (Graph::Edge *e : edges) {
