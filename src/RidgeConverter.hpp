@@ -361,8 +361,8 @@ namespace skadi {
 				return unsigned(size * i.y + i.x);
 			};
 
+			const float fsize = float(hypot(size, size));
 			auto distanceBetween = [&](const index &a, const index &b) -> float {
-				static const float fsize = float(hypot(size, size));
 				return hypot((a.x - b.x) / fsize, (a.y - b.y) / fsize);
 			};
 
@@ -381,15 +381,19 @@ namespace skadi {
 			auto midpointDisplacement = [&](const index &center, const std::vector<index> &parents) -> void {
 				int centerIndex = getIdx(center);
 
+				// ... right?
+				assert(parents.size() >= 2);
+
 				if (!elevationKnown[centerIndex] && !parents.empty() ) {
 					float e = 0;
 					for (index par : parents) {
 						int parIndex = getIdx(par);
-						float etemp = elevationEstimate(
-							elevation[ parIndex ],
-							SHARP,
-							distanceBetween(center, par));
-						e += etemp;
+						//float etemp = elevationEstimate(
+						//	elevation[ parIndex ],
+						//	SHARP,
+						//	distanceBetween(center, par));
+						//e += etemp;
+						e += elevation[parIndex];
 					}
 					e /= parents.size();
 					elevation[centerIndex] = e;
@@ -470,7 +474,7 @@ namespace skadi {
 				int centerIndex = getIdx(center);
 				cellParents[centerIndex] = parents;
 			};
-			diamondSquare(compileParents, size);
+			//diamondSquare(compileParents, size);
 
 
 			
@@ -544,18 +548,26 @@ namespace skadi {
 
 				// estimate elevation for this cell from known children
 				float et = 0;
+				float wt = 0;
 				for (index child : it->second) {
-					float e = elevationEstimate(
-						elevation[getIdx(child)],
-						// interpolationValue[ cellIndex ],
-						BU_SHARP,
-						distanceBetween(child, cell)
-					);
+					//float e = elevationEstimate(
+					//	elevation[getIdx(child)],
+					//	// interpolationValue[ cellIndex ],
+					//	BU_SHARP,
+					//	distanceBetween(child, cell)
+					//);
+
+					float d = distanceBetween(cell, child);
+					float w = exp(-d * d * 0.001);
+
+					float e = w * elevation[getIdx(child)];
+
 					et += e;
+					wt += w;
 				}
 
 				// set new elevation for this cell
-				elevation[cell_idx] = et / it->second.size();
+				elevation[cell_idx] = et / wt;
 				elevationKnown[cell_idx] = true;
 
 				// remove unnecessary entries from children map
